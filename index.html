@@ -1,0 +1,2492 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7A1C2A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ratio">
+<meta name="description" content="Ratio: hukuk çalışma sistemi">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts.css">
+<script>window.RATIO_PWA = true; window.RATIO_SURUM = '2026.11.09-1524';</script>
+<script src="firebase-config.js"></script>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<style>body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}</style>
+<title>Ratio</title>
+<style>
+/* Düzen: kanun metni gibi. Solda madde ve adım numarası, ortada ~65 karakterlik okuma sütunu,
+   kaynaklar kenar notu gibi küçük mono etiketlerde. Telefonda tek sütun ve alt sekme çubuğu. */
+:root{
+  --paper:#EEF0EC; --sheet:#FAFBF8; --sheet-2:#F2F4F0;
+  --ink:#141922; --ink-2:#4C5767; --ink-3:#7C8593;
+  --rule:#D3D8D1; --rule-2:#E3E7E1;
+  --accent:#7A1C2A; --accent-ink:#FFFFFF; --accent-soft:#F1E2E4; --accent-line:#C99CA3;
+  --good:#2B6746; --good-soft:#DBECE1;
+  --warn:#8F5C0E; --warn-soft:#F3E6CC;
+  --bad:#AD341C; --bad-soft:#F6DCD5;
+  --focus:#2A5DA6;
+  --f-display:"Source Serif 4","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:10px; --r-s:7px; --tab-h:60px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1015; --sheet:#151920; --sheet-2:#1B2029;
+    --ink:#E7E9ED; --ink-2:#A6AEBB; --ink-3:#727B8A;
+    --rule:#2B323D; --rule-2:#222833;
+    --accent:#E58A96; --accent-ink:#22090E; --accent-soft:#3A2027; --accent-line:#7E4650;
+    --good:#7DC9A2; --good-soft:#18302A;
+    --warn:#E5B76B; --warn-soft:#382C17;
+    --bad:#F09380; --bad-soft:#3B221E;
+    --focus:#8FB6F2; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1015; --sheet:#151920; --sheet-2:#1B2029;
+  --ink:#E7E9ED; --ink-2:#A6AEBB; --ink-3:#727B8A;
+  --rule:#2B323D; --rule-2:#222833;
+  --accent:#E58A96; --accent-ink:#22090E; --accent-soft:#3A2027; --accent-line:#7E4650;
+  --good:#7DC9A2; --good-soft:#18302A;
+  --warn:#E5B76B; --warn-soft:#382C17;
+  --bad:#F09380; --bad-soft:#3B221E;
+  --focus:#8FB6F2; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--f-ui);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--paper)}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:600;line-height:1.22;text-wrap:balance;margin:0}
+p{margin:0}
+ul,ol{margin:0}
+.vh,.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.muted{color:var(--ink-2)}
+.small{font-size:13.5px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* Üst çubuk */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--paper);border-bottom:1px solid var(--rule)}
+.top-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:14px;min-height:54px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wordmark{font-family:var(--f-display);font-style:italic;font-weight:600;font-size:23px;text-decoration:none;color:var(--accent);line-height:1}
+.course{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+.tabs-top{display:none;gap:4px;margin-left:10px}
+.tabs-top a{padding:7px 12px;border-radius:999px;text-decoration:none;color:var(--ink-2);font-weight:500;font-size:14px}
+.tabs-top a[aria-current="page"]{background:var(--sheet);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+.sync{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);white-space:nowrap;background:none;border:0;padding:6px 0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.sync[data-s="on"] .dot{background:var(--good)}
+.sync[data-s="connecting"] .dot,.sync[data-s="slow"] .dot{background:var(--warn)}
+.sync[data-s="error"] .dot,.sync[data-s="readonly"] .dot{background:var(--bad)}
+@media (max-width:520px){.sync-t{display:none}}
+
+/* Alt sekme çubuğu (telefon) */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(3,1fr);background:var(--sheet);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tabbar a{display:flex;align-items:center;justify-content:center;min-height:var(--tab-h);text-decoration:none;font-weight:500;font-size:14px;color:var(--ink-2);position:relative}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+.tabbar a[aria-current="page"]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:2px;background:var(--accent)}
+@media (min-width:900px){.tabbar{display:none}.tabs-top{display:flex}}
+
+/* Sayfa */
+.shell{display:block;max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px calc(var(--tab-h) + 44px + env(safe-area-inset-bottom,0px));outline:none}
+@media (min-width:900px){.shell{padding-block:34px 72px}}
+.col{max-width:760px}
+.title{font-size:29px;margin-top:6px}
+@media (max-width:520px){.title{font-size:24px}}
+.lead{color:var(--ink-2);max-width:64ch;margin-top:8px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:16px 18px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stack{display:flex;flex-direction:column;gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);font-weight:500;font-size:14.5px;text-decoration:none;line-height:1.2}
+.btn:hover{border-color:var(--ink-3)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--accent);padding:0 8px}
+.btn.sm{min-height:34px;padding:0 13px;font-size:13.5px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.03em;padding:2px 8px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet-2);color:var(--ink-2);white-space:nowrap}
+.pill.ok{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.pill.warn{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.pill.bad{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.pill.accent{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent)}
+.src{display:inline-flex;align-items:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.03em;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;padding:1px 6px;white-space:nowrap;background:var(--sheet-2);vertical-align:1px}
+.madde{font-family:var(--f-mono);font-size:.86em;color:var(--accent);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;padding:3px;background:var(--sheet);margin-top:16px}
+.seg button{border:0;background:none;padding:7px 16px;border-radius:999px;font-weight:500;font-size:14px;color:var(--ink-2);min-height:36px}
+.seg button[aria-checked="true"]{background:var(--accent);color:var(--accent-ink)}
+input[type="date"]{border:1px solid var(--rule);background:var(--sheet);border-radius:var(--r-s);padding:8px 10px;min-height:40px}
+textarea{display:block;width:100%;min-height:210px;resize:vertical;padding:14px 16px;border-radius:var(--r-s);border:1px solid var(--rule);background:var(--sheet);font-family:var(--f-display);font-size:16.5px;line-height:1.55}
+select{border:1px solid var(--accent-line);background:var(--sheet);border-radius:6px;padding:3px 6px;font-family:var(--f-ui);font-size:14.5px;max-width:100%}
+select.ok{border-color:var(--good);background:var(--good-soft)}
+select.bad{border-color:var(--bad);background:var(--bad-soft)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tab-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (min-width:900px){.toast{bottom:28px}}
+.thinking{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px dashed var(--rule);border-radius:var(--r-s);color:var(--ink-2);margin-top:12px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* Bugün */
+.exam{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.plan{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:10px}
+.plan li{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:12px 14px}
+.plan .min{font-family:var(--f-mono);font-size:13px;color:var(--ink-2)}
+.plan strong{display:block;font-weight:600}
+.plan .s{display:block;color:var(--ink-2);font-size:13.5px}
+@media (max-width:440px){.plan li{grid-template-columns:44px 1fr}.plan li .btn{grid-column:1/-1}}
+.why-plan{color:var(--ink-2);font-size:13.5px;margin-top:10px;max-width:64ch}
+.stat3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}
+.stat3>div{border-top:1px solid var(--rule);padding-top:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat3 b{font-family:var(--f-display);font-size:26px;font-weight:600}
+.stat3 small{color:var(--ink-2);font-size:12.5px}
+@media (max-width:440px){.stat3{grid-template-columns:1fr}}
+
+/* Konu yolu */
+.path{list-style:none;padding:0;margin:22px 0 0;position:relative}
+.path::before{content:"";position:absolute;left:19px;top:10px;bottom:10px;width:1px;background:var(--rule)}
+.node{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:7px 0;position:relative}
+.node-no{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-size:13px;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);position:relative;z-index:1}
+.node.open .node-no{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.node.locked .node-no,.node.unlocked .node-no{border-color:var(--accent-line);color:var(--accent)}
+.node-body{padding-top:8px;min-width:0}
+.node-card{background:var(--sheet);border:1px solid var(--accent-line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.node-t{font-family:var(--f-display);font-size:17px;font-weight:600;text-decoration:none;display:block}
+a.node-t:hover{text-decoration:underline;text-underline-offset:3px}
+.node.empty .node-t{color:var(--ink-2);font-weight:400}
+.node-m{font-size:13px;color:var(--ink-2);margin-top:3px;display:flex;flex-wrap:wrap;gap:2px 12px}
+.mini{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;max-width:300px}
+.mini i{height:5px;border-radius:2px;background:var(--rule)}
+.mini i.done{background:var(--good)}
+.mini i.part{background:var(--warn)}
+.sources{margin-top:24px}
+.sources ul{padding-left:1.1em;margin-top:8px;color:var(--ink-2);font-size:14px}
+.sources li+li{margin-top:4px}
+
+/* Konu sayfası */
+.back{font-size:14px;color:var(--accent);text-decoration:none;font-weight:500}
+.konu-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
+.konu-t .eyebrow{margin-top:12px}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ring{--p:0;width:76px;height:76px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--rule-2) 0);display:grid;place-items:center;position:relative}
+.ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--paper)}
+.ring b{position:relative;font-family:var(--f-mono);font-size:15px;font-weight:500}
+.ring.big{width:96px;height:96px}
+.ring.big::before{background:var(--sheet)}
+@media (max-width:640px){.konu-t .lead{display:none}}
+@media (max-width:520px){.konu-head{grid-template-columns:1fr}.ring-wrap{flex-direction:row;justify-content:flex-start}.ring{width:58px;height:58px}.ring::before{inset:6px}.ring b{font-size:13px}}
+.steps{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;margin-top:20px;scrollbar-width:thin}
+.step-btn{flex:none;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);font-weight:500;font-size:13.5px;color:var(--ink-2);min-height:38px}
+.step-btn .n{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-family:var(--f-mono);font-size:11.5px;background:var(--sheet-2);border:1px solid var(--rule);color:var(--ink-2)}
+.step-btn.done .n{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.step-btn.part .n{border-color:var(--warn);color:var(--warn)}
+.step-btn[aria-current="step"]{border-color:var(--accent);color:var(--ink)}
+.step-btn[aria-current="step"] .n{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.step-body{max-width:860px}
+.step-h{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;margin:22px 0 18px}
+.step-no{font-family:var(--f-mono);font-size:13px;color:var(--accent);border:1px solid var(--accent-line);border-radius:6px;padding:3px 8px;margin-top:5px}
+.step-h h2{font-size:24px}
+.step-h p{color:var(--ink-2);margin-top:6px;max-width:64ch}
+.step-foot{display:flex;justify-content:space-between;gap:10px;margin-top:28px;max-width:860px;flex-wrap:wrap}
+
+/* Soru, seçenek, geri bildirim */
+.qlist{list-style:none;padding:0;display:flex;flex-direction:column;gap:12px}
+.q-text{font-family:var(--f-display);font-size:18px;line-height:1.45;margin-top:4px}
+.opts{display:grid;gap:8px;margin-top:12px}
+.opt{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:center;text-align:left;padding:10px 14px;border-radius:var(--r-s);border:1px solid var(--rule);background:var(--sheet);min-height:44px;font-size:14.5px}
+.opt .l{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.opt:hover:not([disabled]){border-color:var(--ink-3)}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}
+.opt.bad{border-color:var(--bad);background:var(--bad-soft)}
+.opt[disabled]{cursor:default}
+.conf{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.choices{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.choice{padding:6px 13px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet-2);font-size:13.5px;min-height:36px;text-align:left}
+.choice:hover:not([disabled]){border-color:var(--ink-3)}
+.choice[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.choice.ok{background:var(--good-soft);border-color:var(--good);color:var(--ink)}
+.choice.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--ink)}
+.choice[disabled]{cursor:default}
+.fb{margin-top:12px;padding:12px 14px;border-radius:var(--r-s);border:1px solid var(--rule);background:var(--sheet-2);font-size:14.5px;line-height:1.55}
+.fb .pill{margin-right:6px}
+.done-card{margin-top:14px}
+
+/* Oku */
+.sec{border-top:1px solid var(--rule);padding:22px 0}
+.sec-h{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:baseline}
+.sec-no{font-family:var(--f-mono);color:var(--accent);font-size:14px}
+.sec-h h3{font-size:20px}
+.sec-srcs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sec-body{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.prose{font-family:var(--f-display);font-size:17px;line-height:1.6;max-width:66ch;margin-left:52px}
+.wide{margin-left:52px;min-width:0}
+@media (max-width:640px){.prose,.wide{margin-left:0}}
+.flat .prose,.flat .wide{margin-left:0}
+.prose ul,.prose ol{padding-left:1.2em}
+.prose li+li{margin-top:6px}
+.prose p+p{margin-top:10px}
+.prose h4{font-size:17px;margin-top:6px}
+.quote{margin:0;font-style:italic;border:1px solid var(--rule);background:var(--sheet);border-radius:var(--r-s);padding:12px 16px}
+.quote cite{display:block;font-style:normal;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2);margin-top:6px}
+.dl{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:8px 16px;margin:0}
+.dl dt{font-family:var(--f-ui);font-weight:600;font-size:14.5px;padding-top:2px}
+.dl dd{margin:0}
+@media (max-width:640px){.dl{grid-template-columns:1fr}.dl dd{margin-bottom:6px}}
+.box{border:1px solid var(--rule);border-radius:var(--r-s);padding:12px 16px;background:var(--sheet);font-family:var(--f-ui);font-size:14.5px;line-height:1.55}
+.box .bh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:600;margin-bottom:6px}
+.box ul{padding-left:1.1em}
+.box li+li{margin-top:4px}
+.box[data-k="kontrol"]{background:var(--warn-soft);border-color:var(--warn)}
+.box[data-k="sinav"]{border-color:var(--accent-line)}
+.box-src{margin-top:8px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet)}
+table{border-collapse:collapse;width:100%;font-family:var(--f-ui);font-size:14px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--rule-2)}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--sheet-2);font-weight:500;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.tl{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 12px;margin:0;scroll-snap-type:x proximity;list-style:none}
+.tl li{flex:0 0 232px;scroll-snap-align:start;border:1px solid var(--rule);background:var(--sheet);border-radius:var(--r-s);padding:12px 14px;font-size:13.5px;line-height:1.5}
+.tl .y{font-family:var(--f-mono);font-size:18px;color:var(--accent)}
+.tl .ad{font-family:var(--f-display);font-weight:600;font-size:16px;margin-top:2px}
+.tl .tag{display:inline-block;margin:6px 0;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);border:1px solid var(--rule);border-radius:4px;padding:1px 6px}
+.read-toggle{margin:14px 0 0 52px}
+@media (max-width:640px){.read-toggle{margin-left:0}}
+
+/* Boş sayfa */
+.prompt-card{border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:var(--r);padding:14px 18px;margin-bottom:12px}
+.prompt-x{font-family:var(--f-display);font-size:18px;line-height:1.45;margin-top:4px;color:var(--ink)}
+.actions{margin-top:12px}
+.result{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+.res-top{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.big-score{font-family:var(--f-display);font-size:34px;font-weight:600;line-height:1}
+.big-score small{font-size:16px;color:var(--ink-2);font-weight:400}
+.kp{list-style:none;padding:0}
+.kp li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--rule-2);font-size:14.5px}
+.kp li:last-child{border-bottom:0}
+.kp button{all:unset;display:contents;cursor:pointer}
+.mark{font-family:var(--f-mono);font-size:13px;color:var(--ink-3);text-align:center}
+.mark.ok{color:var(--good)} .mark.part{color:var(--warn)} .mark.bad{color:var(--bad)}
+.meter{height:8px;border-radius:4px;background:var(--rule-2);overflow:hidden;flex:1;min-width:120px}
+.meter i{display:block;height:100%;background:var(--accent)}
+.hist{margin-top:14px;font-size:13.5px;color:var(--ink-2)}
+.hist li{margin-top:2px}
+.list-h{font-weight:600;font-size:14px;margin-bottom:4px}
+.yan li{margin-top:6px}
+.next{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+
+/* Kartlar */
+.kart-top{margin-bottom:14px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:14px;margin-left:auto}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+.flash{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);padding:18px 20px;box-shadow:0 3px 0 -1px var(--sheet-2),0 3px 0 0 var(--rule),0 6px 0 -2px var(--sheet-2),0 6px 0 -1px var(--rule);max-width:700px}
+.flash-meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-2)}
+.flash-q{font-family:var(--f-display);font-size:21px;line-height:1.38;margin-top:14px}
+.flash-a{font-family:var(--f-display);font-size:17px;line-height:1.58;margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule)}
+.flash-src{margin-top:8px}
+.rate{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
+.rate button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;border-radius:var(--r-s);border:1px solid var(--rule);background:var(--sheet-2);min-height:54px;font-weight:500;font-size:14px}
+.rate button:hover{border-color:var(--ink-3)}
+.rate small{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);font-weight:400}
+.rate [data-g="1"]{border-color:var(--bad)}
+.rate [data-g="4"]{border-color:var(--good)}
+@media (max-width:420px){.rate{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kbd{font-family:var(--f-mono);font-size:11.5px}
+@media (hover:none){.kbd{display:none}}
+
+/* Ayırt et ve pratik sekmeleri */
+.ex-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin}
+.ex-tab{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 14px;border-radius:var(--r-s);border:1px solid var(--rule);background:var(--sheet);text-align:left;font-weight:500;font-size:14px}
+.ex-tab small{font-family:var(--f-mono);font-size:11px;color:var(--ink-2);font-weight:400}
+.ex-tab[aria-current="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ex-body{margin-top:8px;display:flex;flex-direction:column;gap:12px}
+.sort{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.sort-item{border:1px solid var(--rule);background:var(--sheet);border-radius:var(--r-s);padding:12px 14px}
+.sort-item>p{font-family:var(--f-display);font-size:16.5px;line-height:1.45}
+.sort-item.is-ok{border-color:var(--good)}
+.sort-item.is-bad{border-color:var(--bad)}
+.why{margin-top:8px;font-size:14px;color:var(--ink-2)}
+.ex-actions{margin-top:4px}
+.chr-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:700px){.chr-wrap{grid-template-columns:1fr}}
+.chr-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.chr{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:baseline;border:1px solid var(--rule);background:var(--sheet);border-radius:var(--r-s);padding:8px 12px;font-size:14.5px}
+.chr.empty{display:block;color:var(--ink-2);border-style:dashed}
+.chr.is-ok{border-color:var(--good)} .chr.is-bad{border-color:var(--bad)}
+.chr-n,.chr-y{font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.pool .choice{border-radius:var(--r-s)}
+.dy{list-style:none;padding:0;display:flex;flex-direction:column;gap:10px}
+.dy-x{font-family:var(--f-display);font-size:17.5px;line-height:1.45;margin-top:4px}
+.reasons{margin-top:12px;display:grid;gap:8px}
+
+/* Olay ve pratik */
+.olay{border:1px solid var(--rule);border-radius:var(--r);background:var(--sheet);overflow:hidden}
+.olay-h{padding:10px 16px;border-bottom:1px solid var(--rule);font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.olay dl{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px 12px;margin:0;padding:14px 16px}
+.olay dt{font-family:var(--f-mono);color:var(--accent);font-size:13px;padding-top:3px}
+.olay dd{margin:0;font-family:var(--f-display);font-size:16.5px;line-height:1.5}
+.olay .soru,.olay-q{padding:12px 16px;font-weight:600;line-height:1.5}
+.olay .soru{border-top:1px dashed var(--rule)}
+.olay .soru .eyebrow{display:block;font-weight:400;margin-bottom:2px}
+.olay-q{font-family:var(--f-display);font-size:17px;font-weight:400}
+.solve{list-style:none;padding:0;display:flex;flex-direction:column;gap:10px;margin:14px 0 12px}
+.solve h4{font-size:17px;margin-top:2px}
+.solve p.x{font-family:var(--f-display);font-size:16.5px;line-height:1.55;margin-top:6px}
+details{margin-top:10px}
+summary{cursor:pointer;font-weight:500;color:var(--accent);font-size:14px}
+details p{margin-top:6px;font-size:14.5px;color:var(--ink-2)}
+.k2-text{font-family:var(--f-display);font-size:17px;line-height:2.1}
+.k2-text select{font-size:14.5px;vertical-align:baseline}
+.answer{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.timer{font-family:var(--f-mono);font-size:15px;padding:4px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--sheet)}
+.timer.over{border-color:var(--bad);color:var(--bad)}
+.photo img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--rule)}
+.pre{white-space:pre-wrap;font-family:var(--f-display);font-size:15px}
+.rubric td:nth-child(2){font-family:var(--f-mono);white-space:nowrap}
+.oz{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.oz label{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;font-size:14.5px;cursor:pointer}
+.oz input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+.oz .p{font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}
+
+/* Çıkmışlar */
+.cik-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:10px}
+.cik-h{display:flex;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;align-items:center}
+.cik-q{font-family:var(--f-display);font-size:17px;line-height:1.45;margin-top:6px}
+.cik-m{margin-top:10px;font-size:13.5px;color:var(--ink-2)}
+.cik-m .btn{margin-left:auto}
+.cik.ref{border-style:dashed}
+.resmi summary{color:var(--ink)}
+.resmi{margin-top:14px}
+.resmi .body{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.range{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
+.range input{flex:1;min-width:160px;accent-color:var(--accent)}
+.range output{font-family:var(--f-mono);min-width:64px}
+
+/* Kapı ve gelişim */
+.gate-top{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.gate-status{font-size:16px}
+.comps{margin-top:16px;display:flex;flex-direction:column;gap:2px}
+.comp{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) 78px;gap:12px;align-items:center;padding:6px 0;font-size:14px}
+.comp .bar{position:relative;height:10px;border-radius:5px;background:var(--rule-2)}
+.comp .bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--accent)}
+.comp .val{font-family:var(--f-mono);font-size:12.5px;text-align:right}
+.comp.total{border-top:1px solid var(--rule);margin-top:6px;padding-top:10px}
+.thr{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);border-radius:1px}
+@media (max-width:440px){.comp{grid-template-columns:minmax(0,1fr) 64px}.comp .bar{grid-column:1/-1;order:3}}
+.grid2{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);margin-top:18px}
+@media (min-width:860px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ph{font-size:19px}
+.ph2{font-size:16px;margin-top:6px}
+.cw{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.cw li{border-top:1px solid var(--rule-2);padding-top:8px;font-size:14.5px}
+.logs{list-style:none;padding:0;font-size:14px}
+.logs li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid var(--rule-2)}
+.logs li:last-child{border-bottom:0}
+.logs time{font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}
+.demo-banner{margin-top:14px;padding:10px 14px;border:1px solid var(--warn);background:var(--warn-soft);border-radius:var(--r-s);font-size:14px}
+.empty{margin-top:18px}
+.confirm{margin-top:12px;padding:12px 14px;border:1px solid var(--bad);background:var(--bad-soft);border-radius:var(--r-s);display:flex;flex-direction:column;gap:10px;font-size:14.5px}
+
+/* ===== v2: çok dersli yapı ve yeni bileşenler ===== */
+.tabbar{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
+.wide-col{max-width:1040px}
+.pbar{display:block;position:relative;height:6px;border-radius:3px;background:var(--rule-2);overflow:hidden}
+.pbar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+.pbar.thin{height:4px;margin:10px 0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{font-family:var(--f-ui);font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2);white-space:nowrap}
+button.chip{cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ders-g{margin-top:26px}
+.ders-gh{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.ders-list{list-style:none;padding:0;margin:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))}
+.ders-k{display:flex;flex-direction:column;gap:8px;height:100%;padding:16px 16px 14px;border:1px solid var(--rule);border-radius:var(--r);background:var(--sheet);text-decoration:none;color:var(--ink);transition:border-color .15s}
+.ders-k:hover{border-color:var(--accent-line)}
+.dk-ad{font-family:var(--f-display);font-size:19px;font-weight:600;line-height:1.25;text-wrap:balance}
+.dk-src{font-size:13px;color:var(--ink-2);line-height:1.45}
+.dk-m{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12.5px;color:var(--ink-3);font-family:var(--f-mono);align-items:center;margin-top:auto}
+.genel-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));margin:6px 0 16px}
+.mini-list{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:6px}
+.mini-list li{display:flex;justify-content:space-between;gap:12px;font-size:14.5px;align-items:baseline}
+.mini-list li span{font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.warn-t{color:var(--warn)!important}
+.node.next .node-card{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.node-card .pbar{margin-top:8px}
+.harita{margin:6px 0 18px;padding:14px 16px;border:1px solid var(--rule);border-radius:var(--r);background:var(--sheet)}
+.hr-kok{font-family:var(--f-display);font-weight:600;font-size:16px;margin:4px 0 10px}
+.hr-dal{list-style:none;margin:0;padding:0;display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr))}
+.hr-dal button{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 10px;border-radius:var(--r-s);border:1px solid var(--rule-2);background:var(--sheet-2)}
+.hr-dal button:hover{border-color:var(--accent-line)}
+.hr-dal button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.hr-dal b{display:block;font-size:14px;font-weight:600}
+.hr-dal small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.35}
+.hr-no{font-family:var(--f-mono);font-size:12px;color:var(--accent);padding-top:2px}
+.hr-ok{color:var(--good);font-size:13px}
+.hr-dal button.read{opacity:.78}
+.sec-soru{margin:4px 0 14px 52px;padding:10px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--r-s) var(--r-s) 0;font-family:var(--f-display);font-size:16.5px;font-style:italic;max-width:62ch}
+.sec-soru span{display:block;font-family:var(--f-mono);font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+.fig{margin-top:16px;margin-bottom:16px}
+.fig figcaption{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.fig-alt{font-size:12.5px;color:var(--ink-3);margin-top:6px;max-width:66ch}
+.agac{display:grid;gap:12px}
+.ag-kok{justify-self:center;position:relative;padding:7px 16px;border:1.5px solid var(--accent);border-radius:999px;background:var(--accent-soft);font-weight:600;font-size:14.5px;text-align:center}
+.ag-kok::after{content:"";position:absolute;left:50%;top:100%;height:12px;border-left:1.5px solid var(--rule)}
+.ag-dal{list-style:none;margin:0;padding:14px 0 0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));border-top:1.5px solid var(--rule)}
+.ag-dal>li{position:relative;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet);padding:10px 12px}
+.ag-dal>li::before{content:"";position:absolute;top:-15px;left:50%;height:14px;border-left:1.5px solid var(--rule)}
+.ag-n b{display:block;font-size:14.5px;font-weight:600}
+.ag-n span{display:block;font-size:13.5px;color:var(--ink-2);line-height:1.45;margin-top:2px}
+.ag-dal ul{list-style:none;margin:8px 0 0;padding:0 0 0 12px;border-left:2px solid var(--accent-line);display:grid;gap:8px}
+.ag-dal ul b{font-size:14px}
+.akis{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.akis li{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet)}
+.akis b{display:block;font-size:14.5px}
+.akis p{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+.ak-n{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--f-mono);font-size:12px}
+.sema{overflow-x:auto}
+.sema svg{display:block;width:100%;max-width:470px;height:auto;margin:0 auto;font-family:var(--f-ui)}
+.sema .sn{fill:var(--sheet);stroke:var(--ink-3);stroke-width:1.2}
+.sema .sn.acc{fill:var(--accent-soft);stroke:var(--accent)}
+.sema .sn.mute{fill:var(--sheet-2);stroke:var(--rule)}
+.sema .sn-t{fill:var(--ink);font-size:14px;font-weight:600;text-anchor:middle}
+.sema .sn-a{fill:var(--ink-2);font-size:11.5px;text-anchor:middle}
+.sema .se{fill:none;stroke:var(--ink-3);stroke-width:1.4}
+.sema .se.x{stroke:var(--bad);stroke-dasharray:5 4}
+.sema .sl{fill:var(--ink-2);font-size:12px;paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round}
+.sema .sl.x{fill:var(--bad)}
+.sema .mk{fill:var(--ink-3)} .sema .mk.x{fill:var(--bad)}
+.yokla{margin:12px 0;border:1px dashed var(--accent-line);border-radius:var(--r-s);background:var(--sheet);font-family:var(--f-ui);font-size:14.5px}
+.yokla summary{cursor:pointer;padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;list-style:none}
+.yokla summary::-webkit-details-marker{display:none}
+.yokla summary::after{content:"Cevabı aç";margin-left:auto;font-family:var(--f-mono);font-size:11.5px;color:var(--accent)}
+.yokla[open] summary::after{content:"Kapat"}
+.yk-l{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.yk-q{font-weight:500;flex-basis:100%}
+.yk-a{padding:0 14px 12px;color:var(--ink);line-height:1.55;border-top:1px solid var(--rule-2);padding-top:10px}
+.tbl-cap{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:14px 0 6px}
+td.c-ok{color:var(--good)} td.c-no{color:var(--bad)}
+.box[data-k="neden"]{background:var(--accent-soft);border-color:var(--accent-line)}
+.box[data-k="hata"]{background:var(--bad-soft);border-color:var(--bad)}
+.box[data-k="ornek"]{background:var(--good-soft);border-color:var(--good)}
+.box[data-k="ipucu"]{background:var(--sheet-2)}
+.box[data-k="tanim"]{background:var(--accent-soft);border-color:var(--accent-line)}
+.box[data-k="onemli"]{border-color:var(--warn);border-left-width:4px}
+.box[data-k="karsilastir"]{border-left-width:4px}
+.pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;white-space:pre-wrap;background:var(--sheet-2);border:1px solid var(--rule);border-radius:var(--r-s);padding:10px 12px;overflow-x:auto;margin:10px 0}
+.mmd{overflow-x:auto;text-align:center}.mmd.ok svg{max-width:100%;height:auto}
+.kart-ek{margin:10px 0 0;font-family:var(--f-ui);font-size:13.5px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}.kart-ek dt{color:var(--ink-3);font-weight:600}.kart-ek dd{margin:0}
+.olay-t{font-size:15px;line-height:1.6;margin:6px 0 10px}.olay-t p{margin:0 0 8px}
+.cik-k{display:block;font-family:var(--f-ui);font-size:12.5px;color:var(--ink-3);margin-bottom:2px}
+.h-ara{font-family:var(--f-ui);font-size:15px;font-weight:600;margin:26px 0 8px}
+.hesap-form{display:grid;gap:10px;margin:14px 0;padding:14px}.fld{display:grid;gap:4px;font-family:var(--f-ui);font-size:13.5px}.fld input{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet);color:var(--ink)}
+.path-grup{font-family:var(--f-ui);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 8px}
+.ipucu-wrap{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.iskelet{margin:0;padding:10px 14px 10px 30px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet);font-size:14px;line-height:1.5;display:grid;gap:4px}
+.kw-chips{display:flex;flex-wrap:wrap;gap:6px}
+.kw{font-family:var(--f-mono);font-size:12.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink-2);transition:background .2s,border-color .2s}
+.kw.hit{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.kw.miss{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.bos-olcer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px;font-size:13.5px}
+.bos-olcer .pbar{flex:1;min-width:120px}
+.kart-fil{display:flex;flex-direction:column;gap:8px;margin:10px 0 14px}
+.gap{display:inline-block;color:var(--accent);letter-spacing:-1px;font-family:var(--f-mono)}
+mark.gap.ok{background:var(--good-soft);color:var(--good);padding:0 4px;border-radius:4px;letter-spacing:0;font-family:inherit;font-weight:600}
+.kart-liste{margin:0;padding-left:1.3em;display:grid;gap:4px}
+table.mini{font-size:14px}
+.kart-yazi{min-height:96px;margin-top:12px}
+.kw-sonuc{margin-top:12px;display:grid;gap:6px}
+.rate button.sug{outline:2px solid var(--accent);outline-offset:1px}
+.kart-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.kart-list li{border:1px solid var(--rule);border-radius:var(--r-s);background:var(--sheet)}
+.kart-list li.open{border-color:var(--accent-line)}
+.kl-b{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;font-size:14.5px}
+.kl-b:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.kl-n{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);padding-top:2px}
+.kl-s{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.kl-s small{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.kl-a{padding:0 12px 12px 50px;font-size:14.5px;line-height:1.55}
+.degisim{padding:8px 12px;border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:0 var(--r-s) var(--r-s) 0;font-size:14.5px;margin:4px 0 8px}
+@media (max-width:640px){.sec-soru{margin-left:0}.kl-a{padding-left:12px}}
+@media (prefers-reduced-motion:reduce){.kw,.ders-k{transition:none}}
+</style>
+<header class="top">
+  <div class="top-in">
+    <a class="wordmark" href="#bugun">Ratio</a>
+    <span class="course">Hukuk çalışma sistemi</span>
+    <nav class="tabs-top" aria-label="Bölümler">
+      <a href="#bugun" data-tab="bugun">Bugün</a>
+      <a href="#dersler" data-tab="dersler">Dersler</a>
+      <a href="#dersler" data-tab="konu" hidden>Konu</a>
+      <a href="#gelisim" data-tab="gelisim">Gelişim</a>
+    </nav>
+    <button class="sync" id="sync" data-s="local" data-act="sync-info" type="button"><span class="dot"></span><span class="sync-t">Bu cihazda kayıtlı</span></button>
+  </div>
+</header>
+<main class="shell" id="view" tabindex="-1"></main>
+<nav class="tabbar" aria-label="Bölümler">
+  <a href="#bugun" data-tab="bugun">Bugün</a>
+  <a href="#dersler" data-tab="dersler">Dersler</a>
+  <a href="#dersler" data-tab="konu" hidden>Konu</a>
+  <a href="#gelisim" data-tab="gelisim">Gelişim</a>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+(function () {
+'use strict';
+/* ================= 2. SABİTLER ================= */
+const DAY = 864e5;
+/* Etkin konu: openTopic() ile değişir. Konu anahtarı "<ders>-<konu>" (ör. anayasa-k12). */
+let AKTIF = null, DERS = null, KONU = null, DOC_ID = null, LS_STATE = null, LS_DRAFT = null;
+let PAKET = null, KAYNAK = {}, KAYNAK_KISA = {}, SEC_AD = {}, CARD = {}, QMAP = {};
+let KATALOG = null;
+const PAKET_CACHE = {};
+const LS_GENEL = 'ratio.genel.v1', LS_SON = 'ratio.son';
+const STEPS = [
+  { id: 'isinma', n: '1', ad: 'Isınma', dk: 6 },
+  { id: 'oku', n: '2', ad: 'Oku', dk: 15 },
+  { id: 'bos', n: '3', ad: 'Boş sayfa', dk: 10 },
+  { id: 'kartlar', n: '4', ad: 'Kartlar', dk: 10 },
+  { id: 'ayirt', n: '5', ad: 'Ayırt et', dk: 12 },
+  { id: 'pratik', n: '6', ad: 'Pratik', dk: 20 },
+  { id: 'cikmis', n: '7', ad: 'Çıkmışlar', dk: 15 },
+  { id: 'kapi', n: 'K', ad: 'Kapı', dk: 2 }
+];
+const STEP_IDS = STEPS.map(s => s.id);
+const EX_IDS = ['e1', 'e2', 'e3', 'e4'];
+const exIds = () => EX_IDS.filter(id => PAKET && PAKET.ayirt && PAKET.ayirt[id]);
+const HATA = ['Bilgi eksikliği', 'Kavram karışıklığı', 'Sorunu görememe', 'Uygulama hatası', 'Eksik gerekçe', 'Yapı ve üslup', 'Süre yönetimi'];
+const RECETE = {
+  'Bilgi eksikliği': { x: 'Konunun kartlarını öne al, sonra boş sayfayı tekrarla.', step: 'kartlar' },
+  'Kavram karışıklığı': { x: 'Ayırt et alıştırmalarını ve karşılaştırma tablolarını çalış.', step: 'ayirt' },
+  'Sorunu görememe': { x: 'Olay laboratuvarında maddeleri tek tek rejim unsuruna bağla.', step: 'pratik' },
+  'Uygulama hatası': { x: 'Boşluklu çözümü tekrar et; kuralı olaya bağlayan cümleyi yaz.', step: 'pratik' },
+  'Eksik gerekçe': { x: 'Gerekçeli doğru/yanlış ve “Neden?” sorularını çalış.', step: 'ayirt' },
+  'Yapı ve üslup': { x: 'Çözümlü örnekteki sırayı (sorun, kural, uygulama, sonuç) şablon olarak kullan.', step: 'pratik' },
+  'Süre yönetimi': { x: 'Çıkmışları süre tutarak çöz; puan başına yaklaşık 36 saniye.', step: 'cikmis' }
+};
+const WEIGHTS = { kart: 0.25, bos: 0.10, ayirt: 0.20, pratik: 0.25, cik: 0.20 };
+const COMP_AD = { kart: 'Hatırlama (kartlar)', bos: 'Boş sayfa', ayirt: 'Ayırt etme', pratik: 'Olay çözümü', cik: 'Çıkmışlar' };
+const COMP_STEP = { kart: 'kartlar', bos: 'bos', ayirt: 'ayirt', pratik: 'pratik', cik: 'cikmis' };
+const GATE = 0.8;
+const IPUCU_K = [1, 0.95, 0.85];
+const CONF_AD = ['Tahmin', 'Biraz emin', 'Emin', 'Çok emin'];
+const TIP_AD = { klasik: 'Soru–cevap', bosluk: 'Boşluk doldur', liste: 'Madde say', karsilastir: 'Karşılaştır' };
+
+/* Paketi etkinleştir: içerik değişkenlerini kurar. */
+function setPaket(key, p) {
+  PAKET = p; AKTIF = key; DERS = p.ders; KONU = p.konu;
+  KAYNAK = p.kaynak || {}; KAYNAK_KISA = p.kaynakKisa || {}; SEC_AD = p.secAd || {};
+  CARD = {}; QMAP = {};
+  arr(p.kartlar).forEach((c, i) => { c.n = i + 1; c.tip = c.tip || 'klasik'; CARD[c.id] = c; });
+  p.cikmis = arr(p.cikmis); p.cikmis.forEach(q => { q.max = q.max || q.puan; QMAP[q.id] = q; });
+  p.ayirt = p.ayirt || {}; p.pratik = p.pratik || {};
+  DOC_ID = 'ratio-' + key; LS_STATE = 'ratio.' + DERS + '.' + KONU + '.v1'; LS_DRAFT = 'ratio.' + DERS + '.' + KONU + '.drafts';
+}
+const dersOf = id => (KATALOG ? KATALOG.dersler.find(d => d.id === id) : null);
+const konuOf = (dId, kId) => { const d = dersOf(dId); return d ? d.konular.find(k => k.id === kId) : null; };
+const konuAd = () => PAKET ? (dersOf(DERS) ? dersOf(DERS).ad : '') + ' · Konu ' + PAKET.no : '';
+/* Paket hangi adımları içeriyor? Eksik bileşenin adımı gizlenir, ağırlığı diğerlerine dağılır. */
+function hasStep(id) {
+  if (!PAKET) return false;
+  switch (id) {
+    case 'ayirt': return EX_IDS.some(e => PAKET.ayirt[e]);
+    case 'pratik': return !!(PAKET.pratik.k1 || PAKET.pratik.k2 || PAKET.pratik.k3 || PAKET.pratik.k4);
+    case 'cikmis': return PAKET.cikmis.some(q => q.cekirdek);
+    case 'isinma': return PAKET.isinma.length > 0;
+    case 'oku': return PAKET.oku.length > 0;
+    case 'bos': return !!(PAKET.bos && PAKET.bos.kp && PAKET.bos.kp.length);
+    case 'kartlar': return PAKET.kartlar.length > 0;
+  }
+  return true;
+}
+const stepsOn = () => STEPS.filter(s => hasStep(s.id));
+const stepAd = id => (id === 'cikmis' && PAKET && PAKET.cikmisAd) || (STEPS.find(s => s.id === id) || {}).ad || id;
+
+/* ================= 3. YARDIMCILAR ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function fmt(s) {
+  let h = esc(s);
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/(^|[\s(>])(m\.\s?\d+(?:\/\d+)?)/g, '$1<span class="madde">$2</span>');
+  return h;
+}
+const plainX = s => String(s == null ? '' : s).replace(/\*\*/g, '');
+const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+const pct = x => Math.round(Math.max(0, Math.min(1, x || 0)) * 100);
+const arr = x => Array.isArray(x) ? x : [];
+const str = (x, n) => String(x == null ? '' : x).slice(0, n || 400);
+const clampInt = (x, a, b) => { const n = Math.round(Number(x)); return isNaN(n) ? a : Math.max(a, Math.min(b, n)); };
+function uid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function mmss(ms) { const s = Math.ceil(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function ivlText(d) { return d < 30 ? d + ' gün' : Math.round(d / 30) + ' ay'; }
+function fmtDate(d, o) { try { return new Intl.DateTimeFormat('tr-TR', o).format(d); } catch (e) { return new Date(d).toDateString(); } }
+function relTime(t) {
+  const d = Date.now() - t;
+  if (d < 60e3) return 'az önce';
+  if (d < 3600e3) return Math.floor(d / 60e3) + ' dk önce';
+  if (d < DAY) return Math.floor(d / 3600e3) + ' sa önce';
+  if (d < 2 * DAY) return 'dün';
+  return Math.floor(d / DAY) + ' gün önce';
+}
+function srcTag(s) {
+  const k = String(s).split(' ')[0];
+  const kisa = KAYNAK_KISA[k] ? KAYNAK_KISA[k] + String(s).slice(k.length) : s;
+  return `<span class="src" title="${esc(KAYNAK[k] || s)}">${esc(kisa)}</span>`;
+}
+function shuffle(a, seed) {
+  let h = 2166136261;
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  for (let i = a.length - 1; i > 0; i--) { h = (Math.imul(h, 1103515245) + 12345) >>> 0; const j = h % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ================= 4. FSRS (aralıklı tekrar) =================
+   FSRS-4.5 formülleri, varsayılan ağırlıklar; hedef hatırlama %90. */
+const W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
+const DECAY = -0.5, FACTOR = 19 / 81;
+const clampD = d => Math.min(10, Math.max(1, d));
+const D0 = g => clampD(W[4] - (g - 3) * W[5]);
+const retr = (days, s) => s > 0 ? Math.pow(1 + FACTOR * days / s, DECAY) : 0;
+function fsrsNext(rec, g, now) {
+  let s, d, lapses = (rec && rec.lapses) || 0;
+  const reps = ((rec && rec.reps) || 0) + 1;
+  if (!rec || !rec.s) {
+    s = W[g - 1]; d = D0(g); if (g === 1) lapses++;
+  } else {
+    const R = retr(Math.max(0, (now - rec.last) / DAY), rec.s);
+    if (g === 1) {
+      s = Math.min(rec.s, W[11] * Math.pow(rec.d, -W[12]) * (Math.pow(rec.s + 1, W[13]) - 1) * Math.exp(W[14] * (1 - R)));
+      lapses++;
+    } else {
+      s = rec.s * (Math.exp(W[8]) * (11 - rec.d) * Math.pow(rec.s, -W[9]) * (Math.exp(W[10] * (1 - R)) - 1) * (g === 2 ? W[15] : 1) * (g === 4 ? W[16] : 1) + 1);
+    }
+    d = clampD(W[7] * D0(3) + (1 - W[7]) * (rec.d - W[6] * (g - 3)));
+  }
+  let ivl = Math.max(1, Math.round(s));
+  const ex = examTime();
+  if (ex) { const left = (ex - now) / DAY; if (left > 1) ivl = Math.min(ivl, Math.max(1, Math.floor(left / 2))); }
+  return { s: +s.toFixed(4), d: +d.toFixed(4), last: now, due: now + ivl * DAY, ivl, reps, lapses, lastG: g, t: now };
+}
+function cardR(rec, at) { if (!rec || !rec.s) return 0; return retr(Math.max(0, (at - rec.last) / DAY), rec.s); }
+
+/* ================= 5. DURUM VE KAYIT ================= */
+const MAPS = ['steps', 'read', 'pre', 'cards', 'ex', 'att', 'calib', 'err', 'log'];
+function fresh() {
+  return { v: 1, epoch: { n: 0, t: 0 }, t: 0, examDate: null, examT: 0, steps: {}, read: {}, pre: {}, cards: {}, ex: {}, att: {}, calib: {}, err: {}, log: {},
+    gate: { passed: false, override: false, t: 0 }, last: { step: 'isinma', t: 0 } };
+}
+function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* tarayıcı depolaması kapalı */ } }
+function sane(x) {
+  const o = fresh();
+  if (!x || typeof x !== 'object') return o;
+  for (const k in x) o[k] = x[k];
+  for (const k of MAPS) if (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {};
+  if (!o.gate || typeof o.gate !== 'object') o.gate = fresh().gate;
+  if (!o.epoch || typeof o.epoch !== 'object') o.epoch = { n: 0, t: 0 };
+  if (!o.last || typeof o.last !== 'object') o.last = fresh().last;
+  return o;
+}
+const freshUi = () => ({ step: null, ses: null, ex: 'e1', e1: {}, e2: [], e3: {}, e4: {}, exChecked: {}, order: {},
+  pr: 'k1', k1: 0, k2: {}, k2c: false, k4: {}, cik: null, cikShow: false, self: {}, bosSelf: {}, bosMode: null, bosIpucu: 0, k3Self: {}, k3Mode: null, k3Model: false,
+  photo: {}, photoUrl: {}, preSel: {}, kartSec: 'hepsi', kartYaz: false, kartListe: false, kartAcik: null, yazi: '' });
+const S = {
+  st: fresh(),
+  drafts: {},
+  pendingRender: false,
+  lastKey: null,
+  loading: null,
+  hata: null,
+  ui: Object.assign(freshUi(), { view: 'bugun', ders: null, mins: 30, ai: {}, timer: null, demo: false, confirm: null, onlyWeak: false })
+};
+const isRead = (st, id) => !!(st.read[id] && st.read[id].on !== false);
+
+function attOf(st, kind, ref) {
+  const out = [];
+  for (const id in st.att) { const a = st.att[id]; if (a && a.kind === kind && (ref === undefined || a.ref === ref)) out.push(Object.assign({ id }, a)); }
+  return out.sort((a, b) => b.t - a.t);
+}
+function bestOf(st, kind, ref) { let b = 0; for (const id in st.att) { const a = st.att[id]; if (a && a.kind === kind && (ref === undefined || a.ref === ref)) b = Math.max(b, a.score || 0); } return b; }
+function pruneAtt(st) {
+  const groups = {};
+  for (const id in st.att) { const a = st.att[id]; const k = a.kind + '|' + a.ref; (groups[k] = groups[k] || []).push([id, a]); }
+  for (const k in groups) {
+    const list = groups[k].sort((a, b) => b[1].t - a[1].t);
+    list.slice(3).forEach(([, a]) => { delete a.text; delete a.detail; });
+    list.slice(10).forEach(([id]) => { delete st.att[id]; });
+  }
+}
+function pruneMap(st, key, n) { Object.entries(st[key]).sort((a, b) => b[1].t - a[1].t).slice(n).forEach(([id]) => { delete st[key][id]; }); }
+function addAtt(st, a) { st.att[uid('a')] = Object.assign({ t: Date.now() }, a); pruneAtt(st); }
+function addLog(st, x) { st.log[uid('l')] = { t: Date.now(), x }; pruneMap(st, 'log', 40); }
+function addErr(st, type, where) { st.err[uid('h')] = { t: Date.now(), type, where }; pruneMap(st, 'err', 150); }
+function addCalib(st, conf, ok, label, fix) { st.calib[uid('c')] = { t: Date.now(), conf, ok, label, fix }; pruneMap(st, 'calib', 150); }
+
+function sonrakiAd() {
+  const d = dersOf(DERS); if (!d) return 'sıradaki konu';
+  const i = d.konular.findIndex(k => k.id === KONU), n = d.konular[i + 1];
+  return n ? 'Konu ' + n.no : 'dersin son konusu';
+}
+function commit(mut, opt) {
+  if (!PAKET) return;
+  mut(S.st);
+  const m = mastery(S.st);
+  if (!S.st.gate.passed && m.total >= GATE) {
+    S.st.gate = { passed: true, override: false, t: Date.now() };
+    addLog(S.st, 'Kapı açıldı: ' + sonrakiAd() + ' sırada');
+    toast('Kapı açıldı. Sırada ' + sonrakiAd() + ' var.');
+  }
+  S.st.t = Date.now();
+  lsSet(LS_STATE, S.st);
+  TS.schedule();
+  ozetGuncelle();
+  if (!(opt && opt.quiet)) render();
+}
+let draftTimer = null;
+function setDraft(k, v) { S.drafts[k] = v; clearTimeout(draftTimer); draftTimer = setTimeout(() => lsSet(LS_DRAFT, S.drafts), 400); }
+
+/* Birleştirme: iki cihazın ilerlemesi kayıt kayıt birleşir; sıfırlama (epoch) önceliklidir. */
+function stable(x) {
+  if (Array.isArray(x)) return '[' + x.map(stable).join(',') + ']';
+  if (x && typeof x === 'object') return '{' + Object.keys(x).sort().map(k => JSON.stringify(k) + ':' + stable(x[k])).join(',') + '}';
+  return JSON.stringify(x);
+}
+const newer = (a, b) => (((b && b.t) || 0) > ((a && a.t) || 0) ? b : a);
+function mergeState(a, b) {
+  a = sane(a); b = sane(b);
+  if ((a.epoch.n || 0) !== (b.epoch.n || 0)) return JSON.parse(JSON.stringify((b.epoch.n || 0) > (a.epoch.n || 0) ? b : a));
+  const o = fresh();
+  o.epoch = a.epoch;
+  for (const k of MAPS) {
+    o[k] = Object.assign({}, a[k]);
+    for (const id in b[k]) { const y = b[k][id], x = o[k][id]; if (!x || ((y && y.t) || 0) > ((x && x.t) || 0)) o[k][id] = y; }
+  }
+  if ((b.examT || 0) > (a.examT || 0)) { o.examDate = b.examDate; o.examT = b.examT; } else { o.examDate = a.examDate; o.examT = a.examT || 0; }
+  o.gate = Object.assign({}, newer(a.gate, b.gate));
+  if (a.gate.passed || b.gate.passed) o.gate.passed = true;
+  o.last = newer(a.last, b.last);
+  o.t = Math.max(a.t || 0, b.t || 0);
+  o.att = JSON.parse(JSON.stringify(o.att)); pruneAtt(o);
+  return o;
+}
+function strip(st) { const c = JSON.parse(JSON.stringify(st)); delete c.t; return c; }
+
+/* ================= 6. SENKRON (db): telefon, tablet, bilgisayar =================
+   İki belge: konu belgesi (ratio-<ders>-<konu>) ve genel belge (ratio-genel: sınav tarihleri, konu özetleri, son konu). */
+const SYNC_AD = {
+  local: 'Bu cihazda kayıtlı', connecting: 'Senkron bağlanıyor', slow: 'Senkron gecikiyor', on: 'Tüm cihazlarda senkron',
+  readonly: 'Salt okunur: ilerleme kaydedilemiyor', error: 'Senkron kapalı, bu cihazda kayıtlı'
+};
+const DBX = { db: null, uid: null };
+function syncer(getLocal, adopt) {
+  const R = { ref: null, unsub: null, writing: false, again: false, timer: null, ro: false, state: 'local' };
+  R.set = s => { R.state = s; showSync(); };
+  R.schedule = delay => { if (!R.ref || R.ro) return; clearTimeout(R.timer); R.timer = setTimeout(R.flush, delay == null ? 1200 : delay); };
+  R.flush = async () => {
+    if (!R.ref || R.ro) return;
+    if (R.writing) { R.again = true; return; }
+    R.writing = true; R.again = false; clearTimeout(R.timer); R.timer = null;
+    let retry = 600;
+    try {
+      await R.ref.set(JSON.parse(JSON.stringify(getLocal())));
+      if (R.state !== 'on') R.set('on');
+    } catch (e) {
+      const c = e && e.code;
+      if (c === 'invalid_argument') { R.ro = true; R.set('readonly'); }
+      else if (c === 'quota_exceeded') { R.set('error'); toast('Kayıt alanı doldu; ilerleme bu cihazda tutuluyor.'); }
+      else if (c === 'unavailable') { R.again = true; retry = 1500 + Math.random() * 1500; }
+      else R.set('error');
+    } finally {
+      R.writing = false;
+      if (R.again) { R.again = false; R.schedule(retry); }
+    }
+  };
+  R.stop = () => {
+    if (R.ref && R.timer) R.flush();
+    if (typeof R.unsub === 'function') { try { R.unsub(); } catch (e) { /* yok */ } }
+    R.unsub = null; R.ref = null; R.timer = null;
+  };
+  R.bind = docId => {
+    R.stop();
+    if (!DBX.db || !DBX.uid) { R.set('local'); return; }
+    let ref;
+    try { ref = DBX.db.collection('data/users/' + DBX.uid).doc(docId); } catch (e) { R.set('error'); return; }
+    R.ref = ref; R.ro = false; R.set('connecting');
+    const slow = setTimeout(() => { if (R.ref === ref && R.state === 'connecting') R.set('slow'); }, 10000);
+    R.unsub = ref.onSnapshot(snap => {
+      if (R.ref !== ref) return;
+      const definitive = !snap.metadata.fromCache;
+      if (definitive) clearTimeout(slow);
+      if (snap.exists) adopt(snap.data(), R);
+      else if (definitive && (getLocal().t || 0) > 0) R.schedule(0);
+      if (definitive && !R.ro && R.state !== 'error') R.set('on');
+    }, () => { clearTimeout(slow); if (R.ref === ref) R.set('error'); });
+  };
+  return R;
+}
+function adoptTopic(remote, R) {
+  if (!remote) return;
+  const merged = mergeState(S.st, remote);
+  const key = stable(strip(merged));
+  const changedLocal = key !== stable(strip(S.st));
+  const needPush = key !== stable(strip(sane(remote)));
+  if (changedLocal) { S.st = merged; lsSet(LS_STATE, S.st); ozetGuncelle(); renderSoon(); }
+  if (needPush) R.schedule();
+}
+
+/* Genel belge: ders başına sınav tarihi, konu özetleri (Bugün ve Dersler ekranları için), son açılan konu. */
+function freshGenel() { return { v: 1, t: 0, sinav: {}, ozet: {}, son: null }; }
+function saneGenel(x) {
+  const o = freshGenel();
+  if (!x || typeof x !== 'object') return o;
+  if (x.sinav && typeof x.sinav === 'object' && !Array.isArray(x.sinav)) o.sinav = x.sinav;
+  if (x.ozet && typeof x.ozet === 'object' && !Array.isArray(x.ozet)) o.ozet = x.ozet;
+  if (x.son && x.son.key) o.son = x.son;
+  o.t = x.t || 0;
+  return o;
+}
+let GENEL = saneGenel(lsGet(LS_GENEL));
+function mergeGenel(a, b) {
+  a = saneGenel(a); b = saneGenel(b);
+  const o = freshGenel();
+  for (const k of ['sinav', 'ozet']) {
+    o[k] = Object.assign({}, a[k]);
+    for (const id in b[k]) { const y = b[k][id], x = o[k][id]; if (!x || ((y && y.t) || 0) > ((x && x.t) || 0)) o[k][id] = y; }
+  }
+  o.son = newer(a.son, b.son) || null;
+  o.t = Math.max(a.t || 0, b.t || 0);
+  return o;
+}
+function adoptGenel(remote, R) {
+  if (!remote) return;
+  const merged = mergeGenel(GENEL, remote);
+  const key = stable(Object.assign({}, merged, { t: 0 }));
+  if (key !== stable(Object.assign({}, GENEL, { t: 0 }))) { GENEL = merged; lsSet(LS_GENEL, GENEL); renderSoon(); }
+  if (key !== stable(Object.assign({}, saneGenel(remote), { t: 0 }))) R.schedule();
+}
+function genelCommit(mut) { mut(GENEL); GENEL.t = Date.now(); lsSet(LS_GENEL, GENEL); GS.schedule(); }
+function ozetGuncelle() {
+  if (!PAKET || !AKTIF) return;
+  const m = mastery(S.st);
+  const dues = PAKET.kartlar.map(c => S.st.cards[c.id]).filter(Boolean).map(r => r.due).sort((a, b) => a - b);
+  const o = { m: Math.round(m.total * 1000) / 1000, dues, yeni: PAKET.kartlar.filter(c => !S.st.cards[c.id]).length, step: nextStep(), gate: !!S.st.gate.passed, t: S.st.t || 0 };
+  const prev = GENEL.ozet[AKTIF];
+  if (prev && stable(Object.assign({}, prev, { t: 0 })) === stable(Object.assign({}, o, { t: 0 }))) return;
+  if (!o.t && !hasData(S.st)) return;
+  genelCommit(g => { g.ozet[AKTIF] = o; });
+}
+const TS = syncer(() => S.st, adoptTopic);
+const GS = syncer(() => GENEL, adoptGenel);
+function showSync() {
+  const R = PAKET ? TS : GS, el = document.getElementById('sync');
+  if (!el) return;
+  el.dataset.s = R.state;
+  el.querySelector('.sync-t').textContent = SYNC_AD[R.state] || '';
+  el.setAttribute('aria-label', 'Kayıt durumu: ' + (SYNC_AD[R.state] || ''));
+}
+async function initSync() {
+  if (PWA.on) { pwaInit(); return; }
+  if (!window.claude || typeof window.claude.use !== 'function') { showSync(); return; }
+  let db = null, user = null, id = null;
+  try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) { /* yok */ }
+  if (!db || !user) { showSync(); return; }
+  try { id = await user.id(); } catch (e) { id = null; }
+  if (!id) { showSync(); return; }
+  DBX.db = db; DBX.uid = id;
+  GS.bind('ratio-genel');
+  if (DOC_ID) TS.bind(DOC_ID);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') [TS, GS].forEach(R => { if (R.ref && R.timer) R.flush(); }); });
+
+/* Konu açma: paketi yükle (önbellek), önceki konunun kaydını gönder, yeni konunun durumunu ve senkronunu kur. */
+async function loadJSON(url) {
+  const r = await fetch(url, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function loadKatalog() {
+  try { KATALOG = await loadJSON('paket/katalog.json'); S.hata = null; }
+  catch (e) { S.hata = 'Ders kataloğu yüklenemedi. Bağlantını kontrol edip sayfayı yenile.'; }
+}
+async function openTopic(key, opt) {
+  if (AKTIF === key && PAKET) return true;
+  S.loading = key; render();
+  let p = PAKET_CACHE[key];
+  if (!p) {
+    try { p = PAKET_CACHE[key] = await loadJSON('paket/' + key + '.json'); }
+    catch (e) { S.loading = null; S.hata = 'Bu konunun paketi yüklenemedi. Bağlantını kontrol edip tekrar dene.'; render(); return false; }
+  }
+  if (S.loading !== key) return false;
+  TS.stop();
+  if (S.ui.timer) { clearInterval(S.ui.timer.iv); }
+  setPaket(key, p);
+  S.st = sane(lsGet(LS_STATE));
+  S.drafts = lsGet(LS_DRAFT) || {};
+  Object.assign(S.ui, freshUi(), { timer: null });
+  S.loading = null; S.hata = null;
+  if (S.st.examDate && !(GENEL.sinav[DERS] && GENEL.sinav[DERS].d)) genelCommit(g => { g.sinav[DERS] = { d: S.st.examDate, t: S.st.examT || Date.now() }; });
+  genelCommit(g => { g.son = { key, t: Date.now() }; });
+  lsSet(LS_SON, key);
+  if (DBX.db) TS.bind(DOC_ID); else showSync();
+  ozetGuncelle();
+  return true;
+}
+
+/* ================= 7. YAPAY ZEKÂ (sample) ================= */
+let SAMPLE = null, IMG = null, AI_OFF = false;
+async function initAI() {
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  try { SAMPLE = await window.claude.use('sample'); } catch (e) { SAMPLE = null; }
+  if (SAMPLE) { try { const lim = await SAMPLE.limits(); IMG = lim && lim.images ? lim.images : null; } catch (e) { IMG = null; } }
+  renderSoon();
+}
+const aiReady = () => !!SAMPLE && !AI_OFF;
+const AI_ERR = {
+  rate_limited: 'Çok sık istek gönderildi ya da kullanım sınırına ulaşıldı. Biraz sonra tekrar dene.',
+  session_expired: 'Oturumun sona ermiş. Yeniden giriş yapıp tekrar dene.',
+  image_rejected: 'Fotoğraf okunamadı. Daha net bir JPEG veya PNG dene.',
+  invalid_json: 'Değerlendirme okunamadı. Tekrar dene.',
+  refused: 'Bu cevap değerlendirilemedi. Metni değiştirip tekrar dene.',
+  prompt_too_large: 'Cevap çok uzun. Kısaltıp tekrar dene.',
+  empty_completion: 'Boş yanıt geldi. Tekrar dene.',
+  upstream_error: 'Bağlantı kesildi. Tekrar dene.'
+};
+async function runAI(key, prompt, images) {
+  if (!aiReady()) return null;
+  const ctl = new AbortController();
+  S.ui.ai[key] = { ctl };
+  render();
+  try {
+    const opts = { signal: ctl.signal, modelTier: 'default' };
+    if (images && images.length) opts.images = images;
+    return await SAMPLE.json(prompt, opts);
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'cancelled') return null;
+    if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(code)) {
+      AI_OFF = true; toast('Yapay zekâ bu görünümde kullanılamıyor. Öz değerlendirmeyle devam edebilirsin.');
+    } else if (code === 'images_unavailable') {
+      IMG = null; toast('Bu görünümde fotoğraf gönderilemiyor. Cevabı yazarak gönder.');
+    } else toast(AI_ERR[code] || AI_ERR.upstream_error);
+    return null;
+  } finally {
+    delete S.ui.ai[key];
+    render();
+  }
+}
+function plainBlocks(blocks) {
+  return blocks.map(b => {
+    if (b.t === 'p' || b.t === 'h') return plainX(b.x);
+    if (b.t === 'ul' || b.t === 'ol') return b.items.map(i => '- ' + plainX(i)).join('\n');
+    if (b.t === 'table') return [b.head.join(' | ')].concat(b.rows.map(r => r.map(plainX).join(' | '))).join('\n');
+    if (b.t === 'dl') return b.rows.map(r => plainX(r[0]) + ': ' + plainX(r[1])).join('\n');
+    if (b.t === 'quote') return plainX(b.x) + ' (' + plainX(b.by) + ')';
+    if (b.t === 'timeline') return b.items.map(i => i.y + ' ' + i.ad + ' (' + i.tag + '): ' + plainX(i.x)).join('\n');
+    if (b.t === 'agac') return plainX(b.kok) + ': ' + b.dallar.map(d => plainX(d.ad) + (d.x ? ' (' + plainX(d.x) + ')' : '') + (d.alt ? ': ' + d.alt.map(a => plainX(a.ad) + (a.x ? ' ' + plainX(a.x) : '')).join('; ') : '')).join(' | ');
+    if (b.t === 'akis') return (b.h ? plainX(b.h) + ': ' : '') + b.items.map(i => plainX(i.ad) + ': ' + plainX(i.x)).join(' → ');
+    if (b.t === 'sema') return plainX(b.alt || '');
+    if (b.t === 'yokla') return '';
+    if (b.t === 'box' && b.k !== 'kontrol') return plainX(b.h || '') + ': ' + (b.x ? plainX(b.x) : '') + (b.items ? '\n' + b.items.map(i => '- ' + plainX(i)).join('\n') : '');
+    return '';
+  }).filter(Boolean).join('\n');
+}
+const dersAdi = () => (dersOf(DERS) || { ad: 'hukuk' }).ad;
+function kaynakMetni(ids) { let ss = PAKET.oku.filter(s => ids.includes(s.id)); if (PAKET.otomatik || !ss.length) ss = PAKET.oku; return ss.map(s => s.no + ' ' + s.ad + '\n' + plainBlocks(s.blocks)).join('\n\n').slice(0, 24000); }
+const KURAL_ORTAK = '- Yalnızca verilen kaynağa ve model cevaba dayan; dış bilgi ekleme.\n- Bir unsuru farklı kelimelerle doğru ifade eden cevap tam puan alır.\n- Kaynakta olmayan ama hukuken doğru bir bilgi için puan kırma; "kaynak_disi" listesine yaz.\n- Türkçe, kısa ve somut yaz; öğrenciye "sen" diye hitap et.\n- hata_turleri yalnızca şu listeden seçilir: ' + HATA.slice(0, 6).join(', ') + '.';
+function cevapBolumu(text, photo) {
+  if (photo && text) return 'Öğrencinin cevabı: aşağıdaki metin ve ekteki el yazısı fotoğraf birlikte. Fotoğraftaki metni okuyup "okunan_metin" alanına aynen yaz; okunamayan yerleri [okunamadı] diye işaretle.\n"""\n' + text + '\n"""';
+  if (photo) return 'Öğrencinin cevabı ekteki fotoğrafta, el yazısıyla. Önce okuyup "okunan_metin" alanına aynen yaz; okunamayan yerleri [okunamadı] diye işaretle. Sonra okuduğun metni değerlendir.';
+  return 'Öğrencinin cevabı:\n"""\n' + text + '\n"""';
+}
+function promptBos(text) {
+  const kp = PAKET.bos.kp.map(k => k.id + ': ' + k.x).join('\n');
+  return 'Sen bir ' + dersAdi() + ' asistanısın. Bir öğrencinin "boş sayfa" hatırlama denemesini, yalnızca aşağıdaki anahtar noktalara ve kaynak nota göre değerlendireceksin.\n\nKurallar:\n- Dış bilgi ekleme.\n- Öğrenci bir noktayı kendi cümleleriyle doğru ifade ettiyse "kapsanan" listesine koy. Kavramın adını anıp içeriğini eksik verdiyse "kismi" listesine koy. Hiç değinmediyse hiçbir listeye koyma.\n- Kaynakla çelişen ifadeleri "yanlislar" listesine koy; düzeltmeyi kaynaktan, tek cümleyle ver.\n- Türkçe, kısa ve net yaz; öğrenciye "sen" diye hitap et.\n\nGörev: ' + PAKET.bos.prompt + '\n\nAnahtar noktalar:\n' + kp + '\n\nKaynak not:\n' + kaynakMetni(['s2', 's3', 's4', 's7']) + '\n\nÖğrencinin metni:\n"""\n' + text + '\n"""\n\nYalnızca şu biçimde JSON döndür:\n{"kapsanan":["k1"],"kismi":["k5"],"yanlislar":[{"ifade":"öğrencinin cümlesi","duzeltme":"kaynağa göre doğrusu"}],"geri_bildirim":"en fazla iki cümle","sonraki_adim":"tek cümle"}';
+}
+function promptK3(text, photo) {
+  const k = PAKET.pratik.k3;
+  const olay = k.olay.devlet + '\n' + k.olay.maddeler.map(m => m[0] + ': ' + m[1]).join('\n');
+  return 'Sen titiz bir ' + dersAdi() + ' sınav değerlendiricisisin. Öğrencinin olay çözümünü rubrikle puanla.\n\nKurallar:\n' + KURAL_ORTAK + '\n- Her rubrik boyutuna 0 ile 4 arasında tam sayı ver.\n\nOlay:\n' + olay + '\n\nSoru (' + k.puan + ' puan): ' + k.soru + '\n\nModel çözüm:\n' + k.model.map(plainX).join('\n') + '\n\nKaynak not:\n' + kaynakMetni(['s3', 's4', 's7']) + '\n\nRubrik:\n' + k.rubrik.map(r => r.k + ': ' + r.x).join('\n') + '\n\n' + cevapBolumu(text, photo) + '\n\nYalnızca şu biçimde JSON döndür:\n{"okunan_metin":"","puanlar":{"sorun":0,"kural":0,"uygulama":0,"sonuc":0,"yapi":0},"eksikler":["..."],"yanlislar":[{"ifade":"...","duzeltme":"..."}],"kaynak_disi":[],"hata_turleri":["..."],"guclu_yan":"tek cümle","sonraki_adim":"tek cümle"}';
+}
+function promptCik(q, text, photo) {
+  return 'Sen titiz bir ' + dersAdi() + ' sınav değerlendiricisisin. Öğrencinin çıkmış bir sınav sorusuna verdiği cevabı, sorunun resmî yanıtına göre puanla.\n\nKurallar:\n' + KURAL_ORTAK + '\n- "puan" 0 ile ' + q.max + ' arasında tam sayıdır ve resmî yanıttaki anahtar unsurların doğru kapsanma oranını yansıtır.\n\nSoru (' + q.etiket + ', ' + q.max + ' puan üzerinden): ' + q.soru + '\n\nResmî yanıt:\n' + plainBlocks(q.yanit) + '\n\n' + cevapBolumu(text, photo) + '\n\nYalnızca şu biçimde JSON döndür:\n{"okunan_metin":"","puan":0,"eksik_anahtarlar":["..."],"yanlislar":[{"ifade":"...","duzeltme":"..."}],"kaynak_disi":[],"hata_turleri":["..."],"geri_bildirim":"en fazla iki cümle"}';
+}
+const yanl = x => arr(x).slice(0, 6).map(y => ({ i: str(y && y.ifade, 300), d: str(y && y.duzeltme, 300) })).filter(y => y.i || y.d);
+
+/* ================= 8. HESAPLAR ================= */
+function examDateOf(d) { const x = GENEL.sinav[d]; return x && x.d ? x.d : null; }
+function examTimeOf(d) { const s = examDateOf(d); if (!s) return null; const t = new Date(s + 'T09:00:00').getTime(); return isNaN(t) ? null : t; }
+function examTime(st) { st = st || S.st; const s = (DERS && examDateOf(DERS)) || st.examDate; if (!s) return null; const t = new Date(s + 'T09:00:00').getTime(); return isNaN(t) ? null : t; }
+function horizon(st) { const e = examTime(st), now = Date.now(); return e && e > now ? e : now + 7 * DAY; }
+function examRecall(st) { const h = horizon(st); return avg(PAKET.kartlar.map(c => cardR(st.cards[c.id], h))); }
+function mastery(st) {
+  st = st || S.st;
+  const c = {
+    kart: examRecall(st),
+    bos: bestOf(st, 'bos'),
+    ayirt: avg(exIds().map(id => (st.ex[id] && st.ex[id].best) || 0)),
+    pratik: pratikSkor(st),
+    cik: avg(PAKET.cikmis.filter(q => q.cekirdek).map(q => bestOf(st, 'cik', q.id)))
+  };
+  const W2 = wOn();
+  c.total = Object.keys(W2).reduce((s, k) => s + W2[k] * c[k], 0);
+  return c;
+}
+/* Pakette olmayan bileşenin ağırlığı diğerlerine orantılı dağılır. */
+function wOn() {
+  const on = { kart: hasStep('kartlar'), bos: hasStep('bos'), ayirt: hasStep('ayirt'), pratik: hasStep('pratik'), cik: hasStep('cikmis') };
+  const tot = Object.keys(WEIGHTS).reduce((s, k) => s + (on[k] ? WEIGHTS[k] : 0), 0) || 1;
+  const o = {}; for (const k in WEIGHTS) if (on[k]) o[k] = WEIGHTS[k] / tot;
+  return o;
+}
+function pratikSkor(st) {
+  const p = PAKET.pratik, parts = [];
+  if (p.k2) parts.push([0.25, bestOf(st, 'k2')]);
+  if (p.k3) parts.push([0.55, bestOf(st, 'k3')]);
+  if (p.k4) parts.push([0.20, bestOf(st, 'k4')]);
+  const w = parts.reduce((s, x) => s + x[0], 0);
+  return w ? parts.reduce((s, x) => s + x[0] * x[1], 0) / w : 0;
+}
+function weakest(st) {
+  const m = mastery(st); let best = null;
+  const W2 = wOn();
+  for (const k in W2) { const gap = W2[k] * (1 - m[k]); if (!best || gap > best.gap) best = { k, v: m[k], gap, step: COMP_STEP[k] }; }
+  return best && best.gap > 0.001 ? best : null;
+}
+function stepStatus(id, st) {
+  st = st || S.st;
+  switch (id) {
+    case 'isinma': { const n = PAKET.isinma.filter(q => st.pre[q.id]).length; return n === PAKET.isinma.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'oku': { if (st.steps.oku) return 'done'; const n = PAKET.oku.filter(s => isRead(st, s.id)).length; return n === PAKET.oku.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'bos': return attOf(st, 'bos').length ? 'done' : 'todo';
+    case 'kartlar': { const n = PAKET.kartlar.filter(c => st.cards[c.id]).length; return n === PAKET.kartlar.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'ayirt': { const ids = exIds(), n = ids.filter(e => st.ex[e]).length; return ids.length && n === ids.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'pratik': { const p = PAKET.pratik; const parts = ['k1', 'k2', 'k3', 'k4'].filter(k => p[k]).map(k => k === 'k1' ? !!st.steps.k1 : attOf(st, k).length > 0); const n = parts.filter(Boolean).length; return parts.length && n === parts.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'cikmis': { const core = PAKET.cikmis.filter(q => q.cekirdek); const n = core.filter(q => attOf(st, 'cik', q.id).length).length; return n === core.length ? 'done' : n ? 'part' : 'todo'; }
+    case 'kapi': return st.gate.passed ? 'done' : 'todo';
+  }
+  return 'todo';
+}
+function nextStep() { const s = stepsOn().filter(x => x.id !== 'kapi').find(x => stepStatus(x.id) !== 'done'); return s ? s.id : 'kapi'; }
+function dueCards() { const now = Date.now(); return PAKET.kartlar.filter(c => S.st.cards[c.id] && S.st.cards[c.id].due <= now); }
+function bosMissingCards() {
+  const a = attOf(S.st, 'bos')[0];
+  if (!a || !a.detail) return [];
+  const got = new Set([].concat(a.detail.kap || [], a.detail.kis || []));
+  return [].concat(...PAKET.bos.kp.filter(k => !got.has(k.id)).map(k => k.cards));
+}
+function sessionIds(onlyWeak, early) {
+  const now = Date.now();
+  const list = PAKET.kartlar.filter(c => {
+    if (S.ui.kartSec && S.ui.kartSec !== 'hepsi' && c.sec !== S.ui.kartSec) return false;
+    const r = S.st.cards[c.id];
+    if (onlyWeak) return !r || (r.lastG || 0) <= 2;
+    if (early) return true;
+    return !r || r.due <= now;
+  });
+  const miss = new Set(bosMissingCards());
+  return list.map((c, i) => ({ id: c.id, k: (miss.has(c.id) ? 0 : 1000) + (S.st.cards[c.id] ? cardR(S.st.cards[c.id], now) * 100 : 200) + i / 100 }))
+    .sort((a, b) => a.k - b.k).map(x => x.id);
+}
+function nextDueText() {
+  const now = Date.now();
+  const fut = PAKET.kartlar.map(c => S.st.cards[c.id]).filter(r => r && r.due > now).map(r => r.due).sort((a, b) => a - b);
+  if (!fut.length) return '';
+  const days = Math.max(1, Math.ceil((fut[0] - now) / DAY));
+  const same = fut.filter(d => Math.ceil((d - now) / DAY) === days).length;
+  return 'Sonraki tekrar: ' + (days === 1 ? 'yarın' : days + ' gün sonra') + ' (' + same + ' kart)';
+}
+function confidentWrong(st) { return Object.values(st.calib).filter(x => x.conf >= 3 && !x.ok).sort((a, b) => b.t - a.t); }
+function hasData(st) { return ['pre', 'cards', 'att', 'ex'].some(k => Object.keys(st[k]).length > 0); }
+function buildPlan(mins) {
+  const out = []; let left = mins;
+  const due = dueCards().length;
+  if (due > 0) { const dk = Math.max(2, Math.ceil(due * 0.5)); out.push({ ad: 'Vadesi gelen ' + due + ' kart', alt: konuAd() + ' · unutmak üzere olduklarını önce tekrar et', dk, step: 'kartlar', pri: true }); left -= dk; }
+  const ns = nextStep();
+  if (ns !== 'kapi' && !(ns === 'kartlar' && due > 0)) {
+    const s = STEPS.find(x => x.id === ns); const dk = Math.max(4, Math.min(s.dk, left));
+    out.push({ ad: 'Adım ' + s.n + ' · ' + s.ad, alt: 'Kaldığın yer · ' + konuAd(), dk, step: ns, pri: !out.length }); left -= dk;
+  }
+  const w = weakest(S.st);
+  if (w && w.step !== ns && left >= 8 && stepStatus(w.step) !== 'todo') {
+    const dk = Math.min(15, left);
+    out.push({ ad: 'En zayıf alan: ' + COMP_AD[w.k], alt: '%' + pct(w.v) + ' · ustalıkta %' + Math.round(WEIGHTS[w.k] * 100) + ' ağırlık', dk, step: w.step }); left -= dk;
+  }
+  if (left >= 12 && ns !== 'isinma' && ns !== 'oku' && hasStep('cikmis')) {
+    const core = PAKET.cikmis.filter(q => q.cekirdek && q.dk <= left);
+    const q = core.find(x => !attOf(S.st, 'cik', x.id).length) || core.sort((a, b) => bestOf(S.st, 'cik', a.id) - bestOf(S.st, 'cik', b.id))[0];
+    if (q && bestOf(S.st, 'cik', q.id) < 0.8) out.push({ ad: 'Çıkmış: ' + q.kisa, alt: q.etiket + ' · ' + q.puan + ' puan', dk: q.dk, step: 'cikmis', q: q.id });
+  }
+  if (!out.length) out.push({ ad: 'Kapıya bak', alt: 'Adımlar tamam; ustalık durumunu gör', dk: 2, step: 'kapi', pri: true });
+  return out;
+}
+
+/* Gelişim panelinin örnek görünümü: kaydedilmez, kullanıcının verisi değildir. */
+let DEMO_CACHE = null;
+function demoState() {
+  if (DEMO_CACHE) return DEMO_CACHE;
+  const now = Date.now(), st = fresh();
+  const Ss = [9, 6, 4.5, 12, 3, 7, 2.2, 5, 8, 14, 6, 1.2, 3.5, 4, 10, 2, 5.5, 7, 3, 9, 4];
+  const Gs = [3, 2, 3, 4, 1, 3, 2, 3, 3, 4, 3, 1, 2, 3, 4, 2, 3, 3, 1, 3, 3];
+  PAKET.kartlar.forEach((c, j) => { const i = j % Ss.length; st.cards[c.id] = { s: Ss[i], d: 5, last: now - ((i % 4) + 1) * DAY, due: now + Math.round(Ss[i]) * DAY, ivl: Math.round(Ss[i]), reps: 2, lapses: Gs[i] === 1 ? 1 : 0, lastG: Gs[i], t: now }; });
+  st.ex = { e1: { best: .83, last: .83, n: 2, t: now }, e2: { best: .7, last: .7, n: 1, t: now }, e3: { best: .89, last: .89, n: 1, t: now }, e4: { best: .67, last: .67, n: 1, t: now } };
+  const A = (kind, ref, score, ago) => { st.att[uid('a')] = { t: now - ago * DAY, kind, ref, score, mode: 'ai' }; };
+  A('bos', 'bos', .58, 3); A('k2', 'k2', .83, 2); A('k3', 'k3', .6, 1); A('cik', 'q1', .72, 1); A('cik', 'q2', .56, 1); A('cik', 'q4', 1, 0);
+  const C = (conf, ok, label, fix) => { st.calib[uid('c')] = { t: now, conf, ok, label, fix }; };
+  C(4, true, 'Meclis hükümetinde yasama ve yürütme yasamada toplanır.', ''); C(3, true, 'Devlet başkanı karşı-imzayla işlem yapar.', '');
+  C(4, false, 'Yatay erkler ayrılığı, devletin üniter mi federal mi olduğunu belirler.', 'Yanlış: yatay ayrılık siyasal rejimi, dikey ayrılık devlet biçimini belirler.');
+  C(3, false, '1924 Anayasası saf bir parlamenter rejim kurmuştur.', 'Yanlış: meclis hükümeti ve parlamenter rejimin özelliklerini birlikte taşıyan karma bir modeldir.');
+  C(2, true, '1909 ile hükümet Meclis-i Mebusan’a sorumlu oldu.', ''); C(2, false, 'Yapıcı güvensizlik oyu nedir?', ''); C(1, false, '1876’da Heyet-i Vükela kime sorumluydu?', '');
+  C(1, true, 'Yatay erkler ayrılığı neyi belirler?', ''); C(3, true, 'Meclis hükümetinde fesih yoktur.', ''); C(4, true, '1921 meclis hükümetidir.', '');
+  [['Kavram karışıklığı', 5], ['Bilgi eksikliği', 4], ['Eksik gerekçe', 3], ['Uygulama hatası', 2], ['Süre yönetimi', 1], ['Yapı ve üslup', 1]].forEach(([type, n]) => { for (let i = 0; i < n; i++) st.err[uid('h')] = { t: now - i * 3600e3, type, where: 'örnek' }; });
+  [['Çıkmış (Yatay ve dikey erkler ayrılığı): 5/5', 0.1], ['Olay çözümü (kademe 3): 12/20', 1], ['Boşluklu çözüm: 5/6', 2], ['Rejim teşhisi: %83', 2.2], ['Boş sayfa: %58 kapsandı', 3]].forEach(([x, d]) => { st.log[uid('l')] = { t: now - d * DAY, x }; });
+  DEMO_CACHE = st;
+  return st;
+}
+/* ================= 9. GÖRÜNÜMLER ================= */
+function isTyping() { const a = document.activeElement; return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text')); }
+function renderSoon() { if (isTyping()) S.pendingRender = true; else render(); }
+function keyOf(el) {
+  if (!el || !el.dataset) return null;
+  const d = el.dataset;
+  if (!d.act && !d.chg && !d.draft) return null;
+  return Object.keys(d).sort().map(k => k + '=' + d[k]).join('&');
+}
+function restoreFocus(key) {
+  if (!key) return;
+  for (const el of document.querySelectorAll('[data-act],[data-chg],[data-draft]')) {
+    if (keyOf(el) === key) { try { el.focus({ preventScroll: true }); } catch (e) { /* yok */ } return; }
+  }
+}
+function render() {
+  S.pendingRender = false;
+  const key = S.lastKey || keyOf(document.activeElement);
+  S.lastKey = null;
+  const v = S.ui.view;
+  const tab = v === 'ders' ? 'dersler' : v;
+  document.querySelectorAll('[data-tab]').forEach(a => {
+    if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    if (a.dataset.tab === 'konu') { a.href = AKTIF ? '#konu-' + AKTIF : '#dersler'; a.hidden = !AKTIF; }
+  });
+  const crs = $('.course'); if (crs) crs.textContent = PAKET ? konuAd() : 'Hukuk çalışma sistemi';
+  SEMA_N = 0;
+  const view = $('#view');
+  view.innerHTML = S.loading ? vYukleniyor() : v === 'dersler' ? vDersler() : v === 'ders' ? vDers() : v === 'hesap' ? vHesap() : v === 'gelisim' ? (PAKET ? vGelisim() : vGelisimBos()) : v === 'konu' ? (PAKET ? vKonu() : vYukleniyor()) : vBugun();
+  showSync();
+  mermaidCiz();
+  const nav = document.getElementById('steps'), cur = nav && nav.querySelector('[aria-current="step"]');
+  if (cur) nav.scrollLeft = Math.max(0, cur.offsetLeft - nav.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2);
+  restoreFocus(key);
+}
+/* Mermaid şemaları: kütüphane yalnız gerektiğinde yüklenir; çizilen SVG önbellekte tutulur */
+const MMD = { svg: {}, yuk: null, n: 0 };
+function mermaidCiz() {
+  const els = [...document.querySelectorAll('.mmd[data-mmd]')];
+  if (!els.length) return;
+  els.forEach(el => { const s = MMD.svg[el.dataset.mmd]; if (s) { el.innerHTML = s; el.classList.add('ok'); } });
+  const kalan = els.filter(el => !MMD.svg[el.dataset.mmd]);
+  if (!kalan.length) return;
+  if (!MMD.yuk) MMD.yuk = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = window.RATIO_PWA ? 'vendor/mermaid.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js';
+    sc.onload = () => { try { const dark = matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.dataset.theme !== 'light'; window.mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', securityLevel: 'strict', fontFamily: 'inherit' }); res(window.mermaid); } catch (e) { rej(e); } };
+    sc.onerror = rej; document.head.appendChild(sc);
+  });
+  MMD.yuk.then(async m => {
+    for (const el of kalan) {
+      const code = el.dataset.mmd;
+      if (MMD.svg[code]) { el.innerHTML = MMD.svg[code]; continue; }
+      try { const r = await m.render('mmd' + (++MMD.n), code); MMD.svg[code] = r.svg; } catch (e) { MMD.svg[code] = el.innerHTML; }
+      document.querySelectorAll('.mmd[data-mmd]').forEach(x => { if (x.dataset.mmd === code) { x.innerHTML = MMD.svg[code]; x.classList.add('ok'); } });
+    }
+  }).catch(() => {});
+}
+function toast(msg) {
+  const el = $('#toast'); if (!el) return;
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 3800);
+}
+const head = (n, ad, desc) => `<header class="step-h"><span class="step-no">${esc(n)}</span><div><h2>${esc(ad)}</h2><p>${fmt(desc)}</p></div></header>`;
+const thinking = key => `<div class="thinking" role="status"><span class="pulse" aria-hidden="true"></span><span>Değerlendiriyor. 5–60 saniye sürebilir.</span><button class="btn sm quiet" data-act="ai-stop" data-k="${key}">Durdur</button></div>`;
+function aiNote() {
+  if (aiReady()) return '';
+  return `<p class="muted small">${SAMPLE ? 'Yapay zekâ değerlendirmesi bu görünümde kapalı.' : (window.RATIO_PWA ? 'Uygulama sürümünde yapay zekâ değerlendirmesi yok (yalnız Claude içinde).' : 'Yapay zekâ değerlendirmesi sayfa Claude içinde açıldığında çalışır.')} Öz değerlendirmeyle devam edebilirsin.</p>`;
+}
+
+/* ---------- Bugün ---------- */
+function vBugun() {
+  if (!PAKET) return `<section class="col">
+    <p class="eyebrow">${esc(fmtDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+    <h1 class="title">Şimdi ne çalışmalısın?</h1>
+    <p class="lead">Bir konu seç; Ratio sana adım adım yol gösterir. Kaldığın konu burada planıyla görünür.</p>
+    ${bugunGenel()}
+    <div class="row"><a class="btn pri" href="#dersler">Derslere git</a></div>
+  </section>`;
+  const st = S.st, m = mastery(st), ex = examTime(st);
+  const left = ex ? Math.ceil((ex - Date.now()) / DAY) : null;
+  const plan = buildPlan(S.ui.mins);
+  const examNote = left == null ? 'Tarih girersen tekrar aralıkları sınava göre ayarlanır.'
+    : left > 0 ? left + ' gün kaldı · kartlar sınavdan önce en az iki kez gelecek şekilde sıklaşır.' : left === 0 ? 'Sınav bugün.' : 'Bu tarih geçti; yeni sınav tarihini gir.';
+  return `<section class="col">
+    <p class="eyebrow">${esc(fmtDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+    <h1 class="title">Şimdi ne çalışmalısın?</h1>
+    <p class="lead">Plan; kartlarının unutulma riskinden, ${esc(konuAd())} konusunda kaldığın adımdan ve en zayıf alanından hesaplanıyor.</p>
+    ${bugunGenel()}
+    <div class="card exam">
+      <label class="eyebrow" for="exam-date">${esc(dersAdi())} · sıradaki sınav</label>
+      <div class="row"><input type="date" id="exam-date" data-chg="exam" data-ders="${DERS}" value="${esc(examDateOf(DERS) || st.examDate || '')}"><span class="muted small">${esc(examNote)}</span></div>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="Bugün ayırabileceğin süre">${[15, 30, 60].map(n => `<button role="radio" aria-checked="${S.ui.mins === n}" data-act="mins" data-n="${n}">${n} dk</button>`).join('')}</div>
+    <ol class="plan">${plan.map(p => `<li><span class="min tnum">${p.dk} dk</span><div><strong>${esc(p.ad)}</strong><span class="s">${esc(p.alt)}</span></div><button class="btn sm${p.pri ? ' pri' : ''}" data-act="goto" data-step="${p.step}"${p.q ? ` data-q="${p.q}"` : ''}>Başla</button></li>`).join('')}</ol>
+    <p class="why-plan">Sıra: önce unutmak üzere oldukların, sonra kaldığın adım, sonra ustalığa en çok puan getirecek alan.</p>
+    <div class="stat3">
+      <div><span class="eyebrow">Ustalık · Konu ${esc(PAKET.no)}</span><b class="tnum">%${pct(m.total)}</b><small>Kapı %80</small></div>
+      <div><span class="eyebrow">Sınav günü hatırlama</span><b class="tnum">%${pct(examRecall(st))}</b><small>${ex ? 'sınav günü için tahmin' : '7 gün sonrası için tahmin'}</small></div>
+      <div><span class="eyebrow">Emin olup yanlış</span><b class="tnum">${confidentWrong(st).length}</b><small>Gelişim’de liste hâlinde</small></div>
+    </div>
+  </section>`;
+}
+
+/* ---------- Konu sayfası ---------- */
+function vKonu() {
+  const ON = stepsOn(), ids = ON.map(x => x.id);
+  const step = ids.includes(S.ui.step) ? S.ui.step : 'isinma';
+  S.ui.step = step;
+  const m = mastery(S.st), d = dersOf(DERS);
+  const i = ids.indexOf(step), prev = ON[i - 1], next = ON[i + 1];
+  return `<section>
+    <div class="konu-head">
+      <div class="konu-t">
+        <a class="back" href="#ders-${DERS}">← ${esc(d ? d.ad : 'Ders')} konu yolu</a>
+        <p class="eyebrow">Konu ${esc(PAKET.no)} · ${esc(d ? d.ad : '')}</p>
+        <h1 class="title">${esc(PAKET.ad)}</h1>
+        <p class="lead">${esc(PAKET.lead || '')}</p>
+      </div>
+      <div class="ring-wrap"><div class="ring" style="--p:${pct(m.total)}"><b class="tnum">%${pct(m.total)}</b></div><span class="eyebrow">Kapı %80</span></div>
+    </div>
+    <nav class="steps" id="steps" aria-label="Konu adımları">${ON.map(s => `<button class="step-btn ${stepStatus(s.id)}" data-act="step" data-step="${s.id}"${s.id === step ? ' aria-current="step"' : ''}><span class="n">${s.n}</span><span>${esc(stepAd(s.id))}</span></button>`).join('')}</nav>
+    <div class="step-body">${STEP_VIEW[step]()}</div>
+    <div class="step-foot">${prev ? `<button class="btn" data-act="step" data-step="${prev.id}">← ${esc(stepAd(prev.id))}</button>` : '<span></span>'}${next ? `<button class="btn" data-act="step" data-step="${next.id}">${esc(stepAd(next.id))} →</button>` : ''}</div>
+  </section>`;
+}
+
+/* ---------- 1. Isınma ---------- */
+function sIsinma() {
+  const qs = PAKET.isinma, st = S.st;
+  const done = qs.filter(q => st.pre[q.id]), ok = done.filter(q => st.pre[q.id].ok).length;
+  const item = (q, i) => {
+    const a = st.pre[q.id], sel = a ? a.choice : S.ui.preSel[q.id];
+    const opts = q.o.map((o, j) => {
+      let cls = '';
+      if (a) { if (j === q.a) cls = ' ok'; else if (j === a.choice) cls = ' bad'; }
+      return `<button class="opt${cls}" data-act="pre-opt" data-q="${q.id}" data-i="${j}" aria-pressed="${sel === j}"${a ? ' disabled' : ''}><span class="l">${'ABCD'[j]}</span><span>${fmt(o)}</span></button>`;
+    }).join('');
+    const conf = (!a && sel != null) ? `<div class="conf"><span class="eyebrow">Ne kadar eminsin?</span><div class="choices">${CONF_AD.map((c, k) => `<button class="choice" data-act="pre-conf" data-q="${q.id}" data-c="${k + 1}">${c}</button>`).join('')}</div></div>` : '';
+    const fb = a ? `<div class="fb"><span class="pill ${a.ok ? 'ok' : 'bad'}">${a.ok ? 'Doğru' : 'Yanlış'}</span>${fmt(q.x)} ${srcTag(q.src)}</div>` : '';
+    return `<li class="card"><p class="eyebrow">Soru ${i + 1}</p><p class="q-text">${fmt(q.q)}</p><div class="opts">${opts}</div>${conf}${fb}</li>`;
+  };
+  return head('1', 'Isınma', 'Okumadan önce ' + qs.length + ' soru. Puana sayılmaz; yanlış cevap bile sonraki öğrenmeyi artırır (ön test etkisi). Eminliğin, kalibrasyon ölçümüne girer.') +
+    `<ol class="qlist">${qs.map(item).join('')}</ol>` +
+    (done.length === qs.length ? `<div class="card done-card"><p><strong class="tnum">${ok}/${qs.length} doğru.</strong> ${ok < qs.length ? 'Yanlış bildiklerin, Oku adımında dikkat edeceğin yerler.' : 'Konuya iyi bir başlangıç.'}</p><div class="row" style="margin-top:12px"><button class="btn pri" data-act="step" data-step="oku">Oku adımına geç</button></div></div>` : '');
+}
+
+/* ---------- 2. Oku ---------- */
+const BOX_AD = { tanim: 'Tanım', onemli: 'Önemli', dikkat: 'Dikkat', sinav: 'Sınavda', not: 'Not', kontrol: 'Kontrol', karsilastir: 'Karşılaştır', neden: 'Neden önemli', hata: 'Sık hata', ornek: 'Örnek', ipucu: 'İpucu' };
+const BOX_PILL = { dikkat: 'warn', sinav: 'accent', not: '', kontrol: 'warn', karsilastir: '', neden: 'accent', hata: 'bad', ornek: 'ok', ipucu: '' };
+function blockView(b) {
+  switch (b.t) {
+    case 'p': return `<div class="prose"><p>${fmt(b.x)}</p></div>`;
+    case 'h': return `<div class="prose"><h4>${fmt(b.x)}</h4></div>`;
+    case 'ul': return `<div class="prose"><ul>${b.items.map(i => `<li>${fmt(i)}</li>`).join('')}</ul></div>`;
+    case 'ol': return `<div class="prose"><ol>${b.items.map(i => `<li>${fmt(i)}</li>`).join('')}</ol></div>`;
+    case 'quote': return `<div class="prose"><blockquote class="quote"><p>“${fmt(b.x)}”</p><cite>${fmt(b.by)}</cite></blockquote></div>`;
+    case 'dl': return `<div class="prose"><dl class="dl">${b.rows.map(r => `<dt>${fmt(r[0])}</dt><dd>${fmt(r[1])}</dd>`).join('')}</dl></div>`;
+    case 'table': return `<div class="wide">${b.cap ? `<p class="tbl-cap">${esc(b.cap)}</p>` : ''}<div class="tbl-wrap"><table><thead><tr>${b.head.map(h => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(r => `<tr>${r.map(cellView).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+    case 'agac': return agacView(b);
+    case 'akis': return akisView(b);
+    case 'sema': return semaView(b);
+    case 'yokla': return `<div class="prose">${yoklaView(b)}</div>`;
+    case 'box': return `<div class="prose"><div class="box" data-k="${b.k}"><div class="bh"><span class="pill ${BOX_PILL[b.k] || ''}">${esc(b.l || BOX_AD[b.k] || 'Not')}</span><span>${esc(b.h || '')}</span></div>${b.x ? `<p>${fmt(b.x)}</p>` : ''}${b.items ? `<ul>${b.items.map(i => `<li>${fmt(i)}</li>`).join('')}</ul>` : ''}${b.src ? `<div class="box-src">${srcTag(b.src)}</div>` : ''}</div></div>`;
+    case 'pre': return `<div class="wide"><pre class="pre">${esc(b.x)}</pre></div>`;
+    case 'mermaid': return `<figure class="wide fig"><div class="mmd" data-mmd="${esc(b.x)}"><pre class="pre">${esc(b.x)}</pre></div></figure>`;
+    case 'timeline': return `<div class="wide"><ol class="tl" aria-label="Kronoloji">${b.items.map(i => `<li><div class="y tnum">${esc(i.y)}</div><div class="ad">${esc(i.ad)}</div><span class="tag">${esc(i.tag)}</span><p>${fmt(i.x)}</p></li>`).join('')}</ol></div>`;
+  }
+  return '';
+}
+function sOku() {
+  const n = PAKET.oku.filter(s => isRead(S.st, s.id)).length;
+  const sec = s => {
+    const r = isRead(S.st, s.id);
+    return `<article class="sec" id="sec-${s.id}">
+      <div class="sec-h"><span class="sec-no">${esc(s.no)}</span><div><h3>${esc(s.ad)}</h3><div class="sec-srcs">${s.src.map(srcTag).join('')}</div></div></div>
+      ${s.soru ? `<p class="sec-soru"><span>Bu bölümün sorusu</span>${fmt(s.soru)}</p>` : ''}
+      <div class="sec-body">${s.blocks.map(blockView).join('')}</div>
+      <div class="read-toggle"><button class="btn sm${r ? '' : ' pri'}" data-act="read" data-sec="${s.id}" aria-pressed="${r}">${r ? 'Okundu ✓' : 'Okudum'}</button></div>
+    </article>`;
+  };
+  return head('2', 'Oku', 'Her bölüm bir soruyla açılır; şemalar ve tablolar ilişkileri gösterir, bölüm sonundaki “Kendini yokla” soruları okurken hatırlamayı çalıştırır. Kaynaklar başlıkların altında.') +
+    haritaView() + `<p class="muted small tnum">${n}/${PAKET.oku.length} bölüm okundu</p>${PAKET.oku.map(sec).join('')}
+    <div class="row" style="margin-top:18px">${S.st.steps.oku ? '<span class="pill ok">Oku adımı tamam</span>' : '<button class="btn pri" data-act="oku-done">Okumayı bitir</button>'}<button class="btn" data-act="step" data-step="bos">Boş sayfaya geç</button></div>`;
+}
+
+/* ---------- 3. Boş sayfa ---------- */
+function listBlock(title, items) {
+  items = arr(items).filter(Boolean);
+  return items.length ? `<div><p class="list-h">${esc(title)}</p><ul class="yan">${items.map(x => `<li>${fmt(x)}</li>`).join('')}</ul></div>` : '';
+}
+function yanBlock(items) {
+  items = arr(items);
+  return items.length ? `<div><p class="list-h">Kaynakla çelişenler</p><ul class="yan">${items.map(y => `<li><span class="muted">“${esc(y.i)}”</span><br>${fmt(y.d)}</li>`).join('')}</ul></div>` : '';
+}
+function bosResult(a) {
+  const d = a.detail || {}, kap = new Set(d.kap || []), kis = new Set(d.kis || []);
+  const miss = PAKET.bos.kp.filter(k => !kap.has(k.id) && !kis.has(k.id)).length;
+  return `<div class="card result">
+    <div class="res-top"><span class="big-score tnum">%${pct(a.score)}</span><div><p class="eyebrow">${a.mode === 'ai' ? 'Yapay zekâ karşılaştırması' : 'Öz değerlendirme'} · ${esc(relTime(a.t))}</p><p class="small muted">Kapsanan ${kap.size} · kısmen ${kis.size} · eksik ${miss}</p></div></div>
+    <ul class="kp">${PAKET.bos.kp.map(k => { const s = kap.has(k.id) ? 'ok' : kis.has(k.id) ? 'part' : 'bad'; return `<li><span class="mark ${s}" aria-label="${s === 'ok' ? 'kapsandı' : s === 'part' ? 'kısmen' : 'eksik'}">${s === 'ok' ? '✓' : s === 'part' ? '~' : '✗'}</span><span>${fmt(k.x)}</span></li>`; }).join('')}</ul>
+    ${yanBlock(d.yan)}
+    ${d.gb ? `<p>${fmt(d.gb)}</p>` : ''}
+    ${d.sa ? `<p class="next"><span class="pill accent">Sıradaki adım</span>${fmt(d.sa)}</p>` : ''}
+    ${miss ? `<div class="row"><button class="btn pri sm" data-act="bos-cards">Eksik noktaların kartlarını öne alarak çalış</button></div>` : ''}
+  </div>`;
+}
+function sBos() {
+  const b = PAKET.bos, text = S.drafts.bos || '', last = attOf(S.st, 'bos')[0];
+  const self = S.ui.bosMode === 'self';
+  const selfView = self ? `<div class="card result"><p class="list-h">Yazdığın metinde hangi noktalar var? İşaretle.</p>
+    <ul class="kp">${b.kp.map(k => `<li><span class="mark ${S.ui.bosSelf[k.id] ? 'ok' : ''}">${S.ui.bosSelf[k.id] ? '✓' : '○'}</span><button data-act="bos-kp" data-k="${k.id}" aria-pressed="${!!S.ui.bosSelf[k.id]}">${fmt(k.x)}</button></li>`).join('')}</ul>
+    <div class="row"><button class="btn pri" data-act="bos-self-save">Kaydet</button><span class="muted small tnum">${b.kp.filter(k => S.ui.bosSelf[k.id]).length}/${b.kp.length} işaretli</span></div></div>` : '';
+  const hist = attOf(S.st, 'bos').slice(1, 4);
+  return head('3', 'Boş sayfa', 'Kitap kapalı, hatırladığını yaz. Takılırsan ipucu al: önce iskelet, sonra anahtar kelimeler. Sonra notunla karşılaştır; eksik kalan noktalar kart oturumunda öne alınır.') +
+    `<div class="prompt-card"><p class="eyebrow">Görev · yaklaşık ${b.dk} dk</p><p class="prompt-x">${fmt(b.prompt)}</p></div>
+    <div class="ipucu-wrap">${bosIpucuView(text)}</div>
+    <label class="sr" for="t-bos">Cevabın</label>
+    <textarea id="t-bos" data-draft="bos" placeholder="Hatırladığın her şeyi yaz. Madde madde yazman yeterli.">${esc(text)}</textarea>
+    ${bosMeter(text)}
+    <div class="row actions">${aiReady() ? `<button class="btn pri" data-act="bos-ai" data-needs="bos"${text.trim() ? '' : ' disabled'}>Notumla karşılaştır</button>` : ''}<button class="btn" data-act="bos-self" aria-pressed="${self}">Kendim kontrol edeceğim</button></div>
+    ${aiNote()}
+    ${S.ui.ai.bos ? thinking('bos') : ''}
+    ${selfView}
+    ${last && !self && !S.ui.ai.bos ? bosResult(last) : ''}
+    ${hist.length ? `<ul class="hist"><li class="eyebrow">Önceki denemeler</li>${hist.map(a => `<li class="tnum">%${pct(a.score)}${a.ipucu ? ' · ipuçlu' : ''} · ${esc(relTime(a.t))}</li>`).join('')}</ul>` : ''}`;
+}
+function bosKws() {
+  const seen = new Set(), out = [];
+  PAKET.bos.kp.forEach(k => arr(k.kw).forEach(w => { const l = String(w).split('|')[0]; if (!seen.has(l)) { seen.add(l); out.push(w); } }));
+  return shuffle(out, AKTIF + 'kw');
+}
+function bosIpucuView(text) {
+  const lv = S.ui.bosIpucu, b = PAKET.bos;
+  const seg = `<div class="seg ipucu" role="radiogroup" aria-label="İpucu">${[[0, 'İpucusuz'], [1, 'İskelet'], [2, 'Anahtar kelimeler']].map(([v, l]) => `<button role="radio" aria-checked="${lv === v}" data-act="bos-ipucu" data-v="${v}">${l}</button>`).join('')}</div>`;
+  let body = '';
+  if (lv >= 1 && b.iskelet) body += `<ol class="iskelet">${b.iskelet.map(x => `<li>${fmt(x)}</li>`).join('')}</ol>`;
+  if (lv >= 2) {
+    const h = kwHits(bosKws(), text);
+    body += `<div class="kw-chips" id="bos-kw">${h.map((x, i) => `<span class="kw${x.hit ? ' hit' : ''}" data-i="${i}">${esc(x.ad)}</span>`).join('')}</div>`;
+  }
+  return seg + body + (lv ? `<p class="muted small">İpucuyla yapılan denemenin puanı ${lv === 2 ? '%15' : '%5'} düşük sayılır; ipucusuz hatırlama daha kalıcı öğrenme sağlar.</p>` : '');
+}
+function bosMeter(text) {
+  const kp = PAKET.bos.kp, n = kp.filter(k => kpCovered(k, text)).length;
+  return `<div class="bos-olcer" id="bos-meter" aria-live="polite"><span class="tnum"><b>${n}</b>/${kp.length}</span><span class="pbar"><i style="width:${Math.round(n / kp.length * 100)}%"></i></span><span class="muted small">anahtar noktaya değindin · anahtar kelimelere göre tahmin</span></div>`;
+}
+function bosCanli(text) {
+  const m = document.getElementById('bos-meter');
+  if (m) m.outerHTML = bosMeter(text);
+  const box = document.getElementById('bos-kw');
+  if (box) { const h = kwHits(bosKws(), text); box.querySelectorAll('.kw').forEach(el => { const x = h[+el.dataset.i]; el.classList.toggle('hit', !!(x && x.hit)); }); }
+}
+/* ---------- 4. Kartlar ---------- */
+function boslukHtml(q, show) {
+  return String(q).split(/\[\[(.+?)\]\]/).map((part, i) => i % 2
+    ? (show ? `<mark class="gap ok">${esc(part)}</mark>` : `<span class="gap" aria-label="boşluk">${'＿'.repeat(Math.min(9, Math.max(4, Math.round(part.length / 2))))}</span>`)
+    : fmt(part)).join('');
+}
+const kartOn = c => c.tip === 'bosluk' ? boslukHtml(c.q, false) : fmt(c.q);
+function kartArka(c) {
+  if (c.tip === 'bosluk') return `<p>${boslukHtml(c.q, true)}</p>`;
+  if (c.tip === 'liste') return `<ol class="kart-liste">${c.items.map(i => `<li>${fmt(i)}</li>`).join('')}</ol>`;
+  if (c.tip === 'karsilastir') return `<div class="tbl-wrap"><table class="mini"><thead><tr>${c.kol.map(h => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${c.satir.map(r => `<tr>${r.map(cellView).join('')}</tr>`).join('')}</tbody></table></div>`;
+  return `<p>${fmt(c.a)}</p>${c.ek && c.ek.length ? `<dl class="kart-ek">${c.ek.map(e => `<dt>${esc(e[0])}</dt><dd>${fmt(e[1])}</dd>`).join('')}</dl>` : ''}`;
+}
+function kartDurum(c) {
+  const r = S.st.cards[c.id];
+  if (!r) return ['Yeni', ''];
+  return (r.lastG || 0) <= 2 ? ['Zayıf', 'bad'] : ['İyi', 'ok'];
+}
+function flashView(ses) {
+  const c = CARD[ses.cur], rec = S.st.cards[c.id], first = !ses.res[c.id], now = Date.now();
+  const prev = first ? [1, 2, 3, 4].map(g => fsrsNext(rec, g, now).ivl) : null;
+  const lab = ['Bilemedim', 'Zorlandım', 'Bildim', 'Kolay'];
+  const sub = g => prev ? ivlText(prev[g - 1]) : (g >= 3 ? 'oturumda doğru' : 'tekrar gelir');
+  const yazi = S.drafts.kart || '';
+  let sug = 0, hits = null;
+  if (ses.rev && S.ui.kartYaz && yazi.trim()) {
+    hits = kwHits(c.kw, yazi);
+    const r = hits.filter(h => h.hit).length / (hits.length || 1);
+    sug = r >= 0.8 ? 3 : r >= 0.5 ? 2 : 1;
+  }
+  const done = ses.done.length, tot = ses.total;
+  return `<div class="flash" aria-live="polite">
+    <div class="flash-meta"><span>Kart ${c.n} · ${esc(c.sec)} ${esc(SEC_AD[c.sec] || '')} · ${esc(TIP_AD[c.tip] || '')}</span><span class="tnum">${done}/${tot} tamam</span></div>
+    <span class="pbar thin" aria-hidden="true"><i style="width:${tot ? Math.round(done / tot * 100) : 0}%"></i></span>
+    <div class="flash-q">${kartOn(c)}</div>
+    ${S.ui.kartYaz && !ses.rev ? `<label class="sr" for="t-kart">Cevabın</label><textarea id="t-kart" class="kart-yazi" data-draft="kart" placeholder="Önce kendin yaz, sonra cevabı aç.">${esc(yazi)}</textarea>` : ''}
+    ${ses.rev ? `<div class="flash-a">${kartArka(c)}<div class="flash-src">${srcTag(c.src)}</div></div>
+      ${hits ? `<div class="kw-sonuc"><p class="eyebrow">Cevabındaki anahtar kelimeler</p><div class="kw-chips">${hits.map(h => `<span class="kw ${h.hit ? 'hit' : 'miss'}">${h.hit ? '✓' : '✗'} ${esc(h.ad)}</span>`).join('')}</div><p class="muted small yazi-ozet">Senin cevabın: “${esc(yazi.slice(0, 300))}${yazi.length > 300 ? '…' : ''}”</p></div>` : ''}
+      <div class="rate" role="group" aria-label="Ne kadar hatırladın?">${[1, 2, 3, 4].map(g => `<button data-act="rate" data-g="${g}"${sug === g ? ' class="sug"' : ''}><span>${lab[g - 1]}</span><small>${sub(g)}</small></button>`).join('')}</div>
+      ${sug ? `<p class="muted small">Anahtar kelimelere göre öneri: <strong>${lab[sug - 1]}</strong>. Karar senin.</p>` : ''}`
+      : `<div class="row" style="margin-top:16px"><button class="btn pri" data-act="reveal">Cevabı göster</button><span class="muted kbd">Boşluk tuşu · sonra 1–4</span></div>`}
+  </div>
+  <div class="row" style="margin-top:14px"><button class="btn quiet" data-act="ses-end">Oturumu bitir</button>${ses.hist && ses.hist.length ? '<button class="btn quiet" data-act="kart-geri">↶ Son puanı geri al</button>' : ''}</div>`;
+}
+function kartListe(list) {
+  const now = Date.now();
+  return `<ul class="kart-list">${list.map(c => {
+    const [d, k] = kartDurum(c), r = S.st.cards[c.id], open = S.ui.kartAcik === c.id;
+    const due = r ? (r.due <= now ? 'tekrar zamanı' : ivlText(Math.max(1, Math.ceil((r.due - now) / DAY))) + ' sonra') : '';
+    return `<li class="${open ? 'open' : ''}"><button class="kl-b" data-act="kart-ac" data-id="${c.id}" aria-expanded="${open}"><span class="kl-n tnum">${c.n}</span><span class="kl-q">${kartOn(c)}</span><span class="kl-s"><span class="pill ${k}">${d}</span>${due ? `<small class="tnum">${due}</small>` : ''}</span></button>${open ? `<div class="kl-a">${kartArka(c)}<div class="flash-src">${srcTag(c.src)}</div></div>` : ''}</li>`;
+  }).join('')}</ul>`;
+}
+function sKartlar() {
+  const now = Date.now(), all = PAKET.kartlar, ses = S.ui.ses;
+  const secs = [...new Set(all.map(c => c.sec))];
+  const fil = all.filter(c => S.ui.kartSec === 'hepsi' || c.sec === S.ui.kartSec);
+  const nNew = fil.filter(c => !S.st.cards[c.id]).length;
+  const nDue = fil.filter(c => S.st.cards[c.id] && S.st.cards[c.id].due <= now).length;
+  const nWeak = fil.filter(c => S.st.cards[c.id] && (S.st.cards[c.id].lastG || 0) <= 2).length;
+  let body;
+  if (ses && ses.cur) body = flashView(ses);
+  else if (ses) body = `<div class="card"><p><strong>Oturum bitti.</strong> <span class="tnum">${ses.done.length}/${ses.total}</span> kart tamamlandı; <span class="tnum">${ses.again}</span> kart oturum içinde tekrar istedi.</p><p class="muted small" style="margin-top:6px">${esc(nextDueText())}</p><div class="row" style="margin-top:12px"><button class="btn" data-act="ses-close">Kartlara dön</button>${hasStep('ayirt') ? '<button class="btn pri" data-act="step" data-step="ayirt">Ayırt et adımına geç</button>' : ''}</div></div>`;
+  else if (S.ui.kartListe) body = kartListe(fil);
+  else {
+    const ids = sessionIds(S.ui.onlyWeak, false);
+    const prio = bosMissingCards().filter(id => ids.includes(id)).length;
+    body = ids.length
+      ? `<div class="card"><p>Bu oturumda <strong class="tnum">${ids.length} kart</strong> var${prio ? `; boş sayfada eksik kalan <strong>${prio}</strong> kart önde` : ''}.</p><p class="muted small" style="margin-top:4px">Kart türleri: soru–cevap, boşluk doldur, madde say, karşılaştır.${S.ui.kartYaz ? ' Yazarak cevaplama açık: önce yaz, sonra karşılaştır.' : ''}</p><div class="row" style="margin-top:12px"><button class="btn pri" data-act="ses-start">Oturumu başlat</button></div></div>`
+      : `<div class="card"><p>${S.ui.onlyWeak ? 'Bilmediğin olarak işaretli kart yok.' : 'Şu an vadesi gelen kart yok.'} ${esc(nextDueText())}</p><div class="row" style="margin-top:12px"><button class="btn" data-act="ses-start" data-early="1">Yine de tekrar et</button></div></div>`;
+  }
+  const filters = !(ses && ses.cur) ? `<div class="kart-fil">
+    <div class="chips scroll" role="group" aria-label="Bölüme göre süz">${['hepsi'].concat(secs).map(x => `<button class="chip${S.ui.kartSec === x ? ' on' : ''}" data-act="kart-sec" data-v="${esc(x)}" aria-pressed="${S.ui.kartSec === x}">${x === 'hepsi' ? 'Bütün bölümler' : esc(x + ' ' + (SEC_AD[x] || ''))}</button>`).join('')}</div>
+    <div class="row"><label class="switch"><input type="checkbox" data-chg="onlyweak"${S.ui.onlyWeak ? ' checked' : ''}> Sadece bilmediklerim</label><label class="switch"><input type="checkbox" data-chg="kartyaz"${S.ui.kartYaz ? ' checked' : ''}> Yazarak cevapla</label><button class="btn sm${S.ui.kartListe ? ' pri' : ''}" data-act="kart-liste" aria-pressed="${!!S.ui.kartListe}">${S.ui.kartListe ? 'Oturuma dön' : 'Kart listesi'}</button></div>
+  </div>` : '';
+  return head('4', 'Kartlar', 'FSRS algoritması her kartın hatırlanma olasılığını izler ve kartı unutmak üzereyken getirir. Bilemediğin kart, oturumda iki kez art arda doğru bilinmeden tamamlanmaz. Yazarak cevaplarsan anahtar kelimeler işaretlenir.') +
+    `<div class="row kart-top"><span class="pill tnum">${nNew} yeni</span><span class="pill tnum">${nDue} vadesi gelen</span><span class="pill tnum">${nWeak} zayıf</span><span class="muted small">${esc(nextDueText())}</span></div>${filters}${body}`;
+}
+
+/* ---------- 5. Ayırt et ---------- */
+function orderOf(e) { if (!S.ui.order[e.id]) S.ui.order[e.id] = shuffle(e.items.slice(), e.id + Date.now()); return S.ui.order[e.id]; }
+function exSort(e, map) {
+  const checked = !!S.ui.exChecked[e.id], items = orderOf(e);
+  const placed = items.filter(it => map[it.id] != null).length;
+  const c = items.filter(it => map[it.id] === it.a).length;
+  return `<ol class="sort">${items.map(it => {
+    const v = map[it.id], ok = v === it.a;
+    const btns = e.kovalar.map((k, j) => {
+      let cls = '';
+      if (checked) { if (j === it.a) cls = ' ok'; else if (j === v) cls = ' bad'; }
+      return `<button class="choice${cls}" data-act="sort-pick" data-e="${e.id}" data-it="${it.id}" data-j="${j}" aria-pressed="${v === j}"${checked ? ' disabled' : ''}>${esc(k)}</button>`;
+    }).join('');
+    return `<li class="sort-item${checked ? (ok ? ' is-ok' : ' is-bad') : ''}"><p>${fmt(it.x)}</p><div class="choices" role="group">${btns}</div>${checked && !ok ? `<p class="why">${fmt(it.why)}</p>` : ''}</li>`;
+  }).join('')}</ol>
+  <div class="row ex-actions">${checked
+    ? `<span class="pill ${c === items.length ? 'ok' : 'warn'} tnum">${c}/${items.length} doğru</span><button class="btn" data-act="ex-reset" data-e="${e.id}">Karıştırıp tekrar dene</button>`
+    : `<button class="btn pri" data-act="ex-check" data-e="${e.id}"${placed === items.length ? '' : ' disabled'}>Kontrol et</button><span class="muted small tnum">${placed}/${items.length} yerleştirildi</span>`}</div>`;
+}
+function exChrono(e) {
+  const checked = !!S.ui.exChecked.e2, order = S.ui.e2;
+  const correct = e.items.slice().sort((a, b) => a.y - b.y);
+  const byId = id => e.items.find(x => x.id === id);
+  const pool = orderOf(e).filter(it => !order.includes(it.id));
+  const chosen = order.map((id, i) => { const it = byId(id), ok = checked && correct[i].id === id; return `<li class="chr${checked ? (ok ? ' is-ok' : ' is-bad') : ''}"><span class="chr-n tnum">${i + 1}</span><span>${fmt(it.ad)}</span>${checked ? `<span class="chr-y tnum">${it.y}</span>` : '<span></span>'}</li>`; }).join('');
+  const c = checked ? order.filter((id, i) => correct[i].id === id).length : 0;
+  return `<div class="chr-wrap">
+    <div><p class="eyebrow">Sıralaman</p><ol class="chr-list">${chosen || '<li class="chr empty">Belgeler listesinden en eskisine dokun.</li>'}</ol></div>
+    ${checked
+      ? `<div><p class="eyebrow">Doğru sıra</p><ol class="chr-list">${correct.map((it, i) => `<li class="chr"><span class="chr-n tnum">${i + 1}</span><span><strong>${esc(it.isim)}</strong><br><span class="muted small">${fmt(it.ad)}</span></span><span class="chr-y tnum">${it.y}</span></li>`).join('')}</ol></div>`
+      : `<div><p class="eyebrow">Belgeler</p><div class="choices pool">${pool.map(it => `<button class="choice" data-act="chr-add" data-it="${it.id}">${fmt(it.ad)}</button>`).join('') || '<span class="muted small">Hepsi sıralandı.</span>'}</div></div>`}
+  </div>
+  <div class="row ex-actions">${checked
+    ? `<span class="pill ${c === correct.length ? 'ok' : 'warn'} tnum">${c}/${correct.length} doğru yerde</span><button class="btn" data-act="ex-reset" data-e="e2">Tekrar dene</button>`
+    : `<button class="btn" data-act="chr-undo"${order.length ? '' : ' disabled'}>Geri al</button><button class="btn pri" data-act="ex-check" data-e="e2"${order.length === e.items.length ? '' : ' disabled'}>Kontrol et</button>`}</div>`;
+}
+function exDY(e) {
+  const items = orderOf(e), st = S.ui.e4;
+  const all = items.every(it => st[it.id] && st[it.id].r != null);
+  return `<ol class="dy">${items.map((it, i) => {
+    const s = st[it.id] || {}, locked = s.r != null;
+    let inner = `<div class="choices"><button class="choice" data-act="dy-v" data-it="${it.id}" data-v="1" aria-pressed="${s.v === true}"${locked ? ' disabled' : ''}>Doğru</button><button class="choice" data-act="dy-v" data-it="${it.id}" data-v="0" aria-pressed="${s.v === false}"${locked ? ' disabled' : ''}>Yanlış</button></div>`;
+    if (s.v != null && !locked) {
+      inner += s.c
+        ? `<div class="reasons"><p class="eyebrow">Gerekçen hangisi?</p>${it.why.map((w, j) => `<button class="opt" data-act="dy-r" data-it="${it.id}" data-r="${j}"><span class="l">${'ABC'[j]}</span><span>${fmt(w)}</span></button>`).join('')}</div>`
+        : `<div class="conf"><span class="eyebrow">Ne kadar eminsin?</span><div class="choices">${CONF_AD.map((c, k) => `<button class="choice" data-act="dy-c" data-it="${it.id}" data-c="${k + 1}">${c}</button>`).join('')}</div></div>`;
+    }
+    if (locked) {
+      const vOk = s.v === it.d, rOk = s.r === it.w;
+      inner += `<div class="fb"><span class="pill ${vOk && rOk ? 'ok' : vOk ? 'warn' : 'bad'}">${vOk && rOk ? 'Tam puan' : vOk ? 'Yarım puan: gerekçe yanlış' : 'Yanlış'}</span>İfade <strong>${it.d ? 'doğru' : 'yanlış'}</strong>. ${fmt(it.why[it.w])}</div>`;
+    }
+    return `<li class="card"><p class="eyebrow">İfade ${i + 1}</p><p class="dy-x">${fmt(it.x)}</p>${inner}</li>`;
+  }).join('')}</ol>
+  ${all ? `<div class="row ex-actions"><span class="pill tnum">Puan %${pct(avg(items.map(it => st[it.id].score)))}</span><button class="btn" data-act="ex-reset" data-e="e4">Karıştırıp tekrar dene</button></div>` : ''}`;
+}
+function sAyirt() {
+  const ids = exIds(), cur = ids.includes(S.ui.ex) ? S.ui.ex : ids[0], e = PAKET.ayirt[cur];
+  const tabs = ids.map(id => { const x = PAKET.ayirt[id], r = S.st.ex[id]; return `<button class="ex-tab" data-act="ex" data-e="${id}"${id === cur ? ' aria-current="true"' : ''}><span>${esc(x.ad)}</span><small class="tnum">${r ? 'en iyi %' + pct(r.best) : 'yeni'}</small></button>`; }).join('');
+  const body = (e.tur || (cur === 'e2' ? 'sira' : cur === 'e4' ? 'dy' : 'kova')) === 'sira' ? exChrono(e) : (e.tur || (cur === 'e4' ? 'dy' : 'kova')) === 'dy' ? exDY(e) : exSort(e, cur === 'e3' ? S.ui.e3 : S.ui.e1);
+  return head('5', 'Ayırt et', 'Benzer kurumları birbirinden ayırma alıştırmaları. Maddeler karışık sırayla gelir; yanlışların türüne göre hata defterine düşer.') +
+    `<div class="ex-tabs">${tabs}</div><div class="ex-body"><p class="muted">${fmt(e.aciklama)} ${srcTag(e.src)}</p>${body}</div>`;
+}
+
+/* ---------- 6. Pratik ---------- */
+function olayView(o, etiket, soru) {
+  return `<div class="olay"><div class="olay-h"><span>${esc(o.devlet)}</span>${etiket ? `<span>${esc(etiket)}</span>` : ''}</div>
+    <dl>${o.maddeler.map(m => `<dt>${esc(m[0])}</dt><dd>${fmt(m[1])}</dd>`).join('')}</dl>
+    <p class="soru"><span class="eyebrow">Soru</span>${fmt(soru)}</p></div>`;
+}
+function k1View() {
+  const k = PAKET.pratik.k1, n = Math.min(S.ui.k1, k.adimlar.length - 1);
+  return olayView(k.olay, k.etiket, k.soru) +
+    `<ol class="solve">${k.adimlar.slice(0, n + 1).map((a, i) => `<li class="card"><p class="eyebrow">Adım ${i + 1} / ${k.adimlar.length}</p><h4>${esc(a.h)}</h4><p class="x">${fmt(a.x)}</p><details><summary>Neden?</summary><p>${fmt(a.neden)}</p></details></li>`).join('')}</ol>
+    <div class="row">${n < k.adimlar.length - 1 ? '<button class="btn pri" data-act="k1-next">Sonraki adım</button>' : (S.st.steps.k1 ? '<span class="pill ok">Çözümlü örnek tamam</span><button class="btn" data-act="pr" data-k="k2">Kademe 2’ye geç</button>' : '<button class="btn pri" data-act="k1-done">Anladım, kademe 2’ye geç</button>')}</div>
+    ${n === k.adimlar.length - 1 ? `<div class="fb"><span class="pill">Resmî yanıt</span>${fmt(k.resmi)} ${srcTag('FAS 4.2')}</div>` : ''}`;
+}
+function k2View() {
+  const k = PAKET.pratik.k2, sel = S.ui.k2, checked = S.ui.k2c;
+  const blanks = k.parcalar.filter(p => typeof p !== 'string');
+  const filled = blanks.filter(b => sel[b.b] != null).length;
+  const c = blanks.filter(b => sel[b.b] === b.a).length;
+  const text = k.parcalar.map(p => typeof p === 'string' ? fmt(p)
+    : `<select id="k2-${p.b}" data-chg="k2" data-b="${p.b}" class="${checked ? (sel[p.b] === p.a ? 'ok' : 'bad') : ''}"${checked ? ' disabled' : ''} aria-label="Boşluk ${p.b.slice(1)}"><option value="">seç</option>${p.o.map((o, i) => `<option value="${i}"${sel[p.b] === i ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`).join('');
+  return olayView(k.olay, 'Yeni olay · boşluklu çözüm', k.soru) +
+    `<div class="card" style="margin-top:12px"><p class="eyebrow">Çözümü tamamla</p><p class="k2-text">${text}</p></div>
+    ${checked ? `<ul class="yan">${blanks.filter(b => sel[b.b] !== b.a).map(b => `<li><span class="pill bad">${esc(b.o[b.a])}</span> ${fmt(k.aciklama[b.b])}</li>`).join('')}</ul>` : ''}
+    <div class="row actions">${checked
+      ? `<span class="pill ${c === blanks.length ? 'ok' : 'warn'} tnum">${c}/${blanks.length} doğru</span><button class="btn" data-act="k2-reset">Tekrar dene</button><button class="btn pri" data-act="pr" data-k="k3">Kademe 3’e geç</button>`
+      : `<button class="btn pri" data-act="k2-check"${filled === blanks.length ? '' : ' disabled'}>Kontrol et</button><span class="muted small tnum">${filled}/${blanks.length} boşluk dolu</span>`}</div>`;
+}
+function photoField(k) {
+  const f = S.ui.photo[k], u = S.ui.photoUrl[k];
+  if (f) return `<div class="photo row">${u ? `<img src="${u}" alt="Eklenen cevap fotoğrafı">` : ''}<span class="small">${esc(f.name)}</span><button class="btn sm quiet" data-act="photo-rm" data-k="${k}">Kaldır</button></div>`;
+  const acc = (IMG && IMG.mediaTypes && IMG.mediaTypes.length ? IMG.mediaTypes : ['image/jpeg', 'image/png']).join(',');
+  return `<div class="row"><label class="btn sm"><input class="vh" type="file" accept="${esc(acc)}" data-chg="photo" data-k="${k}">El yazını fotoğrafla ekle</label><span class="muted small">Tablette kalemle çözüp fotoğrafını ekleyebilirsin.</span></div>`;
+}
+function answerBox(key, o) {
+  const text = S.drafts[key] || '', photo = S.ui.photo[key];
+  const t = S.ui.timer && S.ui.timer.key === key ? S.ui.timer : null;
+  const qa = o.q ? ` data-q="${o.q}"` : '';
+  return `<div class="answer">
+    <div class="row">${t ? `<span class="timer tnum" data-timer>${mmss(Math.max(0, t.end - Date.now()))}</span><button class="btn sm quiet" data-act="timer-stop">Süreyi durdur</button>` : `<button class="btn sm" data-act="timer" data-k="${key}" data-m="${o.dk}">Süreyi başlat · ${o.dk} dk</button>`}</div>
+    <label class="sr" for="t-${key}">Cevabın</label>
+    <textarea id="t-${key}" data-draft="${key}" placeholder="Cevabını sınavda yazar gibi yaz: sorun, kural, uygulama, sonuç.">${esc(text)}</textarea>
+    ${IMG && aiReady() ? photoField(key) : ''}
+    <div class="row">${aiReady() ? `<button class="btn pri" data-act="${o.aiAct}"${qa} data-needs="${key}"${text.trim() || photo ? '' : ' disabled'}>Yapay zekâyla değerlendir</button>` : ''}<button class="btn" data-act="${o.selfAct}"${qa}>${esc(o.selfLabel)}</button></div>
+    ${aiNote()}
+    ${S.ui.ai[key] ? thinking(key) : ''}
+  </div>`;
+}
+function resultCard(a, max, extraTop) {
+  const d = a.detail || {};
+  return `<div class="card result">
+    <div class="res-top"><span class="big-score tnum">${a.pts}<small>/${max}</small></span><div><p class="eyebrow">${a.mode === 'ai' ? 'Yapay zekâ değerlendirmesi' : 'Öz değerlendirme'} · ${esc(relTime(a.t))}</p>${d.gy ? `<p>${fmt(d.gy)}</p>` : ''}${d.gb ? `<p>${fmt(d.gb)}</p>` : ''}</div></div>
+    ${extraTop || ''}
+    ${listBlock('Eksikler', d.eks)}${yanBlock(d.yan)}${listBlock('Kaynakta yok ama doğru', d.kd)}
+    ${d.hts && d.hts.length ? `<p class="row small"><span class="eyebrow">Hata türü</span>${d.hts.map(h => `<span class="pill">${esc(h)}</span>`).join('')}</p>` : ''}
+    ${d.sa ? `<p class="next"><span class="pill accent">Sıradaki adım</span>${fmt(d.sa)}</p>` : ''}
+    ${d.okunan ? `<details><summary>Fotoğraftan okunan metin</summary><p class="pre">${esc(d.okunan)}</p></details>` : ''}
+  </div>`;
+}
+function k3View() {
+  const k = PAKET.pratik.k3, last = attOf(S.st, 'k3')[0];
+  const selfView = S.ui.k3Mode === 'self' ? `<div class="card"><p class="list-h">Cevabında bunlar var mı? (her biri 2 puan)</p><ul class="oz">${k.oz.map(r => `<li><label><input type="checkbox" data-chg="k3oz" data-r="${r.id}"${S.ui.k3Self[r.id] ? ' checked' : ''}><span>${fmt(r.x)}</span><span class="p">${r.p} p</span></label></li>`).join('')}</ul><div class="row" style="margin-top:10px"><button class="btn pri" data-act="k3-self-save">Kaydet</button><span class="muted small tnum">${k.oz.filter(r => S.ui.k3Self[r.id]).reduce((s, r) => s + r.p, 0)}/20</span></div></div>` : '';
+  const rub = last ? `<div class="tbl-wrap"><table class="rubric"><thead><tr><th scope="col">Boyut</th><th scope="col">Puan</th><th scope="col">Ölçüt</th></tr></thead><tbody>${k.rubrik.map(r => `<tr><td><strong>${esc(r.ad)}</strong></td><td class="tnum">${last.detail && last.detail.sc && last.detail.sc[r.k] != null ? last.detail.sc[r.k] : '–'}/4</td><td>${fmt(r.x)}</td></tr>`).join('')}</tbody></table></div>` : '';
+  return olayView(k.olay, 'Yeni olay · ' + k.puan + ' puan', k.soru) +
+    (k.iskelet ? `<div class="row"><button class="btn sm" data-act="k3-iskelet">Cevap iskeletini ekle</button><span class="muted small">Sorun, kural, uygulama, sonuç başlıklarını cevap alanına ekler.</span></div>` : '') +
+    answerBox('k3', { aiAct: 'k3-ai', selfAct: 'k3-self', selfLabel: 'Kendim puanlayacağım', dk: k.dk }) +
+    selfView + (last && last.detail ? resultCard(last, 20, rub) : last ? `<p class="muted small">Son deneme: ${last.pts}/20 · ${esc(relTime(last.t))}</p>` : '') +
+    `<div class="row" style="margin-top:12px"><button class="btn quiet" data-act="k3-model">${S.ui.k3Model ? 'Model çözümü gizle' : 'Model çözümü göster'}</button></div>
+    ${S.ui.k3Model ? `<div class="card flat" style="margin-top:6px"><p class="eyebrow">Model çözüm</p><div class="prose" style="margin-top:8px">${k.model.map(p => `<p>${fmt(p)}</p>`).join('')}</div><p class="small muted" style="margin-top:10px">Fasikülün 1924 Anayasası resmî yanıtı (Bölüm 4.1) ve notunun Konu 12 bölümüyle kuruldu.</p></div>` : ''}`;
+}
+function sPratik() {
+  const P = PAKET.pratik, avail = ['k1', 'k2', 'k3', 'k4'].filter(x => P[x]);
+  const k = avail.includes(S.ui.pr) ? S.ui.pr : avail[0];
+  const AD = { k1: 'Çözümlü örnek', k2: 'Boşluklu çözüm', k3: 'Kendi çözümün', k4: 'Tek değişken' };
+  const yap = x => x === 'k1' ? !!S.st.steps.k1 : attOf(S.st, x).length > 0;
+  const tabs = avail.map(x => [x, AD[x], yap(x)]);
+  return head('6', 'Pratik', 'Olay laboratuvarı kademeli: çözümlü örnek, boşluklu çözüm, kendi çözümün ve son olarak tek değişkenli varyasyonlar. Kademe 1 gerçek bir çıkmış uygulamalı sorudur.') +
+    `<div class="ex-tabs">${tabs.map((t, i) => `<button class="ex-tab" data-act="pr" data-k="${t[0]}"${t[0] === k ? ' aria-current="true"' : ''}><span>Kademe ${i + 1} · ${t[1]}</span><small>${t[2] ? 'yapıldı' : 'yapılmadı'}</small></button>`).join('')}</div>
+    <div class="ex-body">${k === 'k1' ? k1View() : k === 'k2' ? k2View() : k === 'k3' ? k3View() : k4View()}</div>`;
+}
+
+/* ---------- 7. Çıkmışlar ---------- */
+function cikQuestion(q) {
+  const key = 'cik-' + q.id, last = attOf(S.st, 'cik', q.id)[0];
+  const show = S.ui.cikShow || !!last;
+  const v = S.ui.self[q.id] != null ? S.ui.self[q.id] : 0;
+  return `<div class="stack"><div><button class="btn quiet" data-act="cik-close">← Çıkmış listesi</button></div>
+    <div class="olay"><div class="olay-h"><span>${esc(q.etiket)}</span><span>${q.puan ? q.puan + ' puan' : 'Puan belirtilmemiş · 20 üzerinden'}</span></div>${q.olay ? `<div class="olay-t">${(Array.isArray(q.olay) ? q.olay : [q.olay]).map(p => `<p>${fmt(p)}</p>`).join('')}</div>` : ''}<p class="olay-q">${fmt(q.soru)}</p></div>
+    ${answerBox(key, { aiAct: 'cik-ai', q: q.id, selfAct: 'cik-show', selfLabel: q.goster || 'Resmî yanıtı göster', dk: q.dk })}
+    ${last && last.detail ? resultCard(last, q.max) : ''}
+    ${show ? `<details class="card resmi" open><summary><strong>${esc(q.yanitAd || 'Resmî yanıt')}</strong> ${srcTag(q.kaynak || ('FAS ' + q.fas))}</summary><div class="body flat">${q.yanit.map(blockView).join('')}</div></details>
+      <div class="card"><label class="list-h" for="r-${q.id}">Resmî yanıta göre kendine puan ver</label><div class="range"><input type="range" id="r-${q.id}" min="0" max="${q.max}" step="1" value="${v}" data-inp="self" data-q="${q.id}"><output class="tnum" id="o-${q.id}">${v}/${q.max}</output><button class="btn sm" data-act="cik-self-save" data-q="${q.id}">Kaydet</button></div></div>` : ''}
+  </div>`;
+}
+function sCikmis() {
+  if (S.ui.cik && QMAP[S.ui.cik]) return head('7', stepAd('cikmis'), 'Süre tut, sınavdaki gibi yaz, sonra ' + (PAKET.cikmisAd ? 'nottaki cevapla' : 'resmî yanıtla') + ' karşılaştır.') + cikQuestion(QMAP[S.ui.cik]);
+  const k1 = PAKET.pratik.k1;
+  return head('7', stepAd('cikmis'), PAKET.cikmisNot || 'Çıkmış sorulardan bu konuya ait olanlar. Çekirdek sorular ustalığa sayılır; diğerleri komşu konularla ortaktır.') +
+    `<ul class="cik-list">${PAKET.cikmis.map(q => {
+      const n = attOf(S.st, 'cik', q.id).length, b = bestOf(S.st, 'cik', q.id);
+      return `<li class="card"><div class="cik-h"><span class="eyebrow">${esc(q.etiket)}</span>${q.cekirdek ? '' : '<span class="pill">' + esc(q.pill || 'Komşu konuyla ortak') + '</span>'}</div><p class="cik-q">${q.olay && q.kisa ? '<span class="cik-k">' + esc(q.kisa) + '</span> ' : ''}${fmt(q.soru.length > 400 ? q.soru.slice(0, 400) + '…' : q.soru)}</p>
+        <div class="row cik-m"><span class="tnum">${q.puan ? q.puan + ' puan' : 'Puan belirtilmemiş'}</span><span class="tnum">≈ ${q.dk} dk</span>${n ? `<span class="pill ${b >= .8 ? 'ok' : b >= .5 ? 'warn' : 'bad'} tnum">En iyi %${pct(b)}</span>` : ''}<button class="btn sm pri" data-act="cik-open" data-q="${q.id}">${n ? 'Tekrar çöz' : 'Çöz'}</button></div></li>`;
+    }).join('')}
+    ${k1 && k1.etiket && !PAKET.cikmis.some(q => k1.etiket.indexOf(q.etiket) === 0) ? `<li class="card cik ref"><div class="cik-h"><span class="eyebrow">${esc(k1.etiket)}</span></div><p class="cik-q">${fmt(k1.soru)}</p><div class="row cik-m"><span>Pratik adımında çözümlü örnek olarak işleniyor.</span><button class="btn sm" data-act="goto" data-step="pratik" data-pr="k1">Pratik’e git</button></div></li>` : ''}</ul>`;
+}
+
+/* ---------- Kapı ---------- */
+function compRows(m) {
+  const W2 = wOn();
+  return Object.keys(W2).map(k => `<div class="comp"><span>${esc(COMP_AD[k])} <span class="muted small">· %${Math.round(W2[k] * 100)}</span></span><span class="bar"><i style="width:${pct(m[k])}%"></i></span><span class="val tnum">%${pct(m[k])}</span></div>`).join('') +
+    `<div class="comp total"><span><strong>Ustalık</strong></span><span class="bar"><i style="width:${pct(m.total)}%"></i><b class="thr" style="left:80%" title="Kapı %80"></b></span><span class="val tnum"><strong>%${pct(m.total)}</strong></span></div>`;
+}
+function sKapi() {
+  const m = mastery(S.st), passed = S.st.gate.passed, w = weakest(S.st);
+  const need = Math.max(0, Math.ceil((GATE - m.total) * 100));
+  const conf = S.ui.confirm === 'gate'
+    ? `<div class="confirm"><p>Kapıyı elle geçersen sıradaki konu önerilir ama bu konunun ustalığı %${pct(m.total)} olarak kalır ve tekrarları sürer.</p><div class="row"><button class="btn pri" data-act="gate-yes">Evet, ${esc(sonrakiAd())} sıraya alınsın</button><button class="btn" data-act="confirm-no">Vazgeç</button></div></div>`
+    : `<div class="row"><button class="btn quiet" data-act="gate-ask">Kapıyı elle geç</button></div>`;
+  return head('K', 'Kapı', 'Konunun ustalığı %80’i geçince kapı açılır ve konu yolunda sıradaki konu önerilir. Ustalık, paketteki bileşenlerin ağırlıklı ortalamasıdır.') +
+    `<div class="card"><div class="gate-top"><div class="ring big" style="--p:${pct(m.total)}"><b class="tnum">%${pct(m.total)}</b></div><div class="stack" style="gap:8px">
+      <p class="gate-status">${passed ? '<span class="pill ok">Kapı açık</span> Sırada ' + esc(sonrakiAd()) + ' var.' : `<span class="pill">Kapı kapalı</span> <span class="tnum">%80 için ${need} puan daha.</span>`}</p>
+      ${!passed && w ? `<p class="muted">En çok puanı <strong>${esc(COMP_AD[w.k])}</strong> getirir (şu an %${pct(w.v)}).</p><div><button class="btn pri sm" data-act="step" data-step="${w.step}">${esc(stepAd(w.step))} adımına git</button></div>` : ''}
+    </div></div>
+    <div class="comps">${compRows(m)}</div>
+    <p class="muted small" style="margin-top:10px">Hatırlama: kartların ${examTime() ? 'sınav günü' : '7 gün sonra'} için tahmini hatırlanma olasılığı. Olay çözümü: boşluklu çözüm %30, kendi çözümün %70. Çıkmışlar: ustalığa sayılan 4 sorunun en iyi puanları.</p>
+    ${passed ? '' : conf}</div>`;
+}
+
+/* ---------- Gelişim ---------- */
+function panelUstalik(st) {
+  const m = mastery(st), w = weakest(st);
+  return `<article class="card panel"><h2 class="ph">Ustalık · Konu ${esc(PAKET.no)}</h2><div class="comps">${compRows(m)}</div>
+    ${w ? `<p class="small">En çok puan getirecek alan: <strong>${esc(COMP_AD[w.k])}</strong>. ${S.ui.demo ? '' : `<button class="btn sm" data-act="goto" data-step="${w.step}">${esc(stepAd(w.step))}</button>`}</p>` : '<p class="small">Bütün bileşenler tam.</p>'}</article>`;
+}
+function panelHatirlama(st) {
+  const h = horizon(st), rs = PAKET.kartlar.map(c => st.cards[c.id] ? cardR(st.cards[c.id], h) : -1);
+  const b = [['%90 ve üstü', r => r >= .9], ['%70–90', r => r >= .7 && r < .9], ['%50–70', r => r >= .5 && r < .7], ['%50 altı', r => r >= 0 && r < .5], ['Hiç çalışılmadı', r => r < 0]];
+  const max = Math.max(1, ...b.map(x => rs.filter(x[1]).length));
+  return `<article class="card panel"><h2 class="ph">Sınav günü hatırlama</h2><p class="muted small">${examTime(st) ? 'Sınav günü' : '7 gün sonra'} kartların hatırlanma olasılığı (FSRS tahmini). Ortalama <strong class="tnum">%${pct(examRecall(st))}</strong>.</p>
+    <div>${b.map(x => { const n = rs.filter(x[1]).length; return `<div class="comp"><span>${esc(x[0])}</span><span class="bar"><i style="width:${Math.round(n / max * 100)}%"></i></span><span class="val tnum">${n} kart</span></div>`; }).join('')}</div></article>`;
+}
+function panelKalibrasyon(st) {
+  const all = Object.values(st.calib);
+  const rows = [1, 2, 3, 4].map(c => { const xs = all.filter(x => x.conf === c); return { c, n: xs.length, acc: xs.length ? xs.filter(x => x.ok).length / xs.length : null }; });
+  const hi = all.filter(x => x.conf >= 3), hiAcc = hi.length ? hi.filter(x => x.ok).length / hi.length : null;
+  const cw = confidentWrong(st);
+  return `<article class="card panel"><h2 class="ph">Kalibrasyon</h2><p class="muted small">Cevaptan önce söylediğin eminlik ile gerçek doğruluk oranın. Isınma ve gerekçeli doğru/yanlış sorularından gelir.</p>
+    <div>${rows.map(r => `<div class="comp"><span>${CONF_AD[r.c - 1]}</span><span class="bar"><i style="width:${r.acc == null ? 0 : pct(r.acc)}%"></i></span><span class="val tnum">${r.acc == null ? '–' : '%' + pct(r.acc)} · ${r.n}</span></div>`).join('')}</div>
+    ${hiAcc != null ? `<p class="small">Emin olduğunda doğruluğun <strong class="tnum">%${pct(hiAcc)}</strong>. ${hiAcc < .8 ? 'Bildiğini sandığın yerler var; aşağıdaki liste öncelikli.' : 'Eminliğin doğrulukla uyumlu.'}</p>` : ''}
+    ${cw.length ? `<h3 class="ph2">Emin olup yanlış bildiklerin</h3><ul class="cw">${cw.slice(0, 5).map(x => `<li><p>${fmt(x.label)}</p>${x.fix ? `<p class="muted small">${fmt(x.fix)}</p>` : ''}</li>`).join('')}</ul>` : ''}</article>`;
+}
+function panelHata(st) {
+  const counts = {}; HATA.forEach(h => { counts[h] = 0; });
+  Object.values(st.err).forEach(e => { if (counts[e.type] != null) counts[e.type]++; });
+  const sorted = HATA.slice().sort((a, b) => counts[b] - counts[a]), top = counts[sorted[0]] ? sorted[0] : null;
+  const max = Math.max(1, ...Object.values(counts));
+  return `<article class="card panel"><h2 class="ph">Hata defteri</h2><p class="muted small">Her yanlış türüne göre etiketlenir; baskın tür, sıradaki çalışmanı belirler.</p>
+    <div>${sorted.map(h => `<div class="comp"><span>${esc(h)}</span><span class="bar"><i style="width:${Math.round(counts[h] / max * 100)}%"></i></span><span class="val tnum">${counts[h]}</span></div>`).join('')}</div>
+    ${top ? `<p class="next small"><span class="pill accent">Reçete</span>${esc(RECETE[top].x)} ${S.ui.demo ? '' : `<button class="btn sm" data-act="goto" data-step="${RECETE[top].step}">${esc(stepAd(RECETE[top].step))}</button>`}</p>` : ''}</article>`;
+}
+function panelEtkinlik(st) {
+  const logs = Object.values(st.log).sort((a, b) => b.t - a.t).slice(0, 8);
+  return `<article class="card panel"><h2 class="ph">Son çalışmalar</h2>${logs.length ? `<ul class="logs">${logs.map(l => `<li><time>${esc(relTime(l.t))}</time><span>${fmt(l.x)}</span></li>`).join('')}</ul>` : '<p class="muted small">Henüz kayıt yok.</p>'}</article>`;
+}
+function panelKayit() {
+  const conf = S.ui.confirm === 'reset'
+    ? `<div class="confirm"><p>Bu konudaki (${esc(konuAd())}) bütün ilerlemen, bütün cihazlarda silinir. Bu geri alınamaz.</p><div class="row"><button class="btn pri" data-act="reset-yes">Evet, sıfırla</button><button class="btn" data-act="confirm-no">Vazgeç</button></div></div>`
+    : `<div class="row"><button class="btn sm quiet" data-act="reset-ask">İlerlemeyi sıfırla</button></div>`;
+  return `<article class="card panel"><h2 class="ph">Kayıt</h2><p class="small"><span class="pill">${esc(SYNC_AD[R.state] || '')}</span></p>
+    <p class="muted small">İlerlemen Claude hesabına bağlı kişisel alanda tutulur; telefonda, tablette ve bilgisayarda bu sayfayı açtığında aynı yerden devam edersin. Bu alanı sayfanın sahibi dâhil başka kimse görmez.</p>${conf}</article>`;
+}
+function vGelisim() {
+  const demo = S.ui.demo, st = demo ? demoState() : S.st;
+  if (!demo && !hasData(S.st)) {
+    return `<section class="col"><p class="eyebrow">Gelişim · ${esc(konuAd())}</p><h1 class="title">Neyi geliştirmen gerekiyor?</h1>
+      <div class="card empty stack"><p>Henüz veri yok. Isınma sorularını ve ilk kart oturumunu bitirince burada ustalığın, sınav günü hatırlama tahminin, kalibrasyonun ve hata defterin görünecek.</p>
+      <div class="row"><button class="btn pri" data-act="goto" data-step="isinma">Isınmaya başla</button><button class="btn" data-act="demo" data-on="1">Örnek veriyle önizle</button></div></div>
+      ${panelKayit()}</section>`;
+  }
+  return `<section><p class="eyebrow">Gelişim · ${esc(konuAd())}</p><h1 class="title">Neyi geliştirmen gerekiyor?</h1>
+    ${demo ? `<div class="demo-banner row"><span class="pill warn">Örnek veri</span><span>Bu görünüm senin ilerlemen değil; panelin nasıl dolacağını gösterir.</span><button class="btn sm" data-act="demo" data-on="0">Kendi verime dön</button></div>` : ''}
+    <div class="grid2">${panelUstalik(st)}${panelHatirlama(st)}${panelKalibrasyon(st)}${panelHata(st)}${panelEtkinlik(st)}${demo ? '' : panelKayit()}</div></section>`;
+}
+
+const STEP_VIEW = { isinma: sIsinma, oku: sOku, bos: sBos, kartlar: sKartlar, ayirt: sAyirt, pratik: sPratik, cikmis: sCikmis, kapi: sKapi };
+
+function k4View() {
+  const k = PAKET.pratik.k4, st = S.ui.k4;
+  const items = k.items.map((it, i) => {
+    const sel = st[it.id];
+    const opts = it.o.map((o, j) => {
+      let cls = '';
+      if (sel != null) { if (j === it.a) cls = ' ok'; else if (j === sel) cls = ' bad'; }
+      return `<button class="opt${cls}" data-act="k4-opt" data-it="${it.id}" data-i="${j}" aria-pressed="${sel === j}"${sel != null ? ' disabled' : ''}><span class="l">${'ABCD'[j]}</span><span>${fmt(o)}</span></button>`;
+    }).join('');
+    return `<li class="card"><p class="eyebrow">Değişiklik ${i + 1}</p><p class="degisim">${fmt(it.degisim)}</p><p class="q-text">${fmt(it.q)}</p><div class="opts">${opts}</div>${sel != null ? `<div class="fb"><span class="pill ${sel === it.a ? 'ok' : 'bad'}">${sel === it.a ? 'Doğru' : 'Yanlış'}</span>${fmt(it.x)} ${srcTag(it.src)}</div>` : ''}</li>`;
+  }).join('');
+  const all = k.items.every(it => st[it.id] != null), c = k.items.filter(it => st[it.id] === it.a).length;
+  return `<div class="card"><p>${fmt(k.giris)}</p></div><ol class="qlist">${items}</ol>` +
+    (all ? `<div class="row ex-actions"><span class="pill ${c === k.items.length ? 'ok' : 'warn'} tnum">${c}/${k.items.length} doğru</span><button class="btn" data-act="k4-reset">Tekrar dene</button></div>` : '') +
+    (attOf(S.st, 'k4').length ? `<p class="muted small">En iyi sonuç: %${pct(bestOf(S.st, 'k4'))}</p>` : '');
+}
+/* ================= 9b. ÇOK DERSLİ GÖRÜNÜMLER VE YENİ BİLEŞENLER ================= */
+
+/* ---------- Türkçe metin eşleştirme (anahtar kelimeler) ---------- */
+function normTr(s) {
+  return String(s == null ? '' : s).toLocaleLowerCase('tr').replace(/[âàá]/g, 'a').replace(/[îíì]/g, 'i').replace(/[ûúù]/g, 'u')
+    .replace(/[’'`´]/g, '').replace(/[^0-9a-zçğıöşü]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function kwHits(kws, text) {
+  const t = ' ' + normTr(text) + ' ';
+  return arr(kws).map(k => {
+    const alts = String(k).split('|').map(normTr).filter(Boolean);
+    return { ad: String(k).split('|')[0], hit: alts.some(a => t.includes(a.length <= 4 && /^\d+$/.test(a) ? ' ' + a : a)) };
+  });
+}
+function kpCovered(kp, text) {
+  const h = kwHits(kp.kw, text), n = h.length, got = h.filter(x => x.hit).length;
+  return n ? got >= (n <= 2 ? n : n - 1) : false;
+}
+
+/* ---------- Okuma şemaları ---------- */
+let SEMA_N = 0;
+function agacView(b) {
+  const leaf = a => `<li><div class="ag-n"><b>${fmt(a.ad)}</b>${a.x ? `<span>${fmt(a.x)}</span>` : ''}</div>${a.alt ? `<ul>${a.alt.map(leaf).join('')}</ul>` : ''}</li>`;
+  return `<figure class="wide fig">${b.h ? `<figcaption>${esc(b.h)}</figcaption>` : ''}<div class="agac"><div class="ag-kok">${fmt(b.kok)}</div><ul class="ag-dal">${b.dallar.map(leaf).join('')}</ul></div></figure>`;
+}
+function akisView(b) {
+  return `<figure class="wide fig">${b.h ? `<figcaption>${esc(b.h)}</figcaption>` : ''}<ol class="akis">${b.items.map((i, n) => `<li><span class="ak-n tnum">${n + 1}</span><div><b>${fmt(i.ad)}</b><p>${fmt(i.x)}</p></div></li>`).join('')}</ol></figure>`;
+}
+function semaView(b) {
+  const id = 'ar' + (++SEMA_N), W = b.w || 360, H = b.y || 260, N = {};
+  b.d.forEach(n => { N[n.id] = n; });
+  const cx = n => n.x + n.w / 2, cy = n => n.y + n.h / 2;
+  const clip = (n, tx, ty) => {
+    const x0 = cx(n), y0 = cy(n), dx = tx - x0, dy = ty - y0;
+    const sx = dx ? (n.w / 2 + 4) / Math.abs(dx) : Infinity, sy = dy ? (n.h / 2 + 4) / Math.abs(dy) : Infinity;
+    const s = Math.min(sx, sy);
+    return [x0 + dx * s, y0 + dy * s];
+  };
+  const r1 = x => Math.round(x * 10) / 10;
+  const edges = b.o.map(e => {
+    const A = N[e.a], B = N[e.b], ax = cx(A), ay = cy(A), bx = cx(B), by = cy(B);
+    const len = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / len, ny = (bx - ax) / len, k = e.egri || 0;
+    const qx = (ax + bx) / 2 + nx * k, qy = (ay + by) / 2 + ny * k;
+    const p1 = clip(A, k ? qx : bx, k ? qy : by), p2 = clip(B, k ? qx : ax, k ? qy : ay);
+    const d = k ? `M${r1(p1[0])},${r1(p1[1])} Q${r1(qx)},${r1(qy)} ${r1(p2[0])},${r1(p2[1])}` : `M${r1(p1[0])},${r1(p1[1])} L${r1(p2[0])},${r1(p2[1])}`;
+    const lx = e.lx != null ? e.lx : r1(k ? (p1[0] + 2 * qx + p2[0]) / 4 : (p1[0] + p2[0]) / 2);
+    const ly = e.ly != null ? e.ly : r1(k ? (p1[1] + 2 * qy + p2[1]) / 4 : (p1[1] + p2[1]) / 2);
+    const lines = String(e.ad || '').split('\n');
+    const tsp = lines.map((t, j) => `<tspan x="${lx}" dy="${j ? 13 : r1(4 - (lines.length - 1) * 6.5)}">${esc(t)}</tspan>`).join('');
+    const mk = e.yon === 'yok' ? '' : ` marker-end="url(#${id}${e.k === 'x' ? 'x' : ''})"`;
+    return `<path class="se${e.k === 'x' ? ' x' : ''}" d="${d}"${mk}/><text class="sl${e.k === 'x' ? ' x' : ''}" text-anchor="${e.anchor || 'middle'}" x="${lx}" y="${ly}">${tsp}</text>`;
+  }).join('');
+  const nodes = b.d.map(n => {
+    const t = n.alt ? `<text class="sn-t" x="${cx(n)}" y="${cy(n) - 3}">${esc(n.ad)}</text><text class="sn-a" x="${cx(n)}" y="${cy(n) + 13}">${esc(n.alt)}</text>` : `<text class="sn-t" x="${cx(n)}" y="${cy(n) + 4.5}">${esc(n.ad)}</text>`;
+    return `<rect class="sn ${n.k || ''}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9"/>${t}`;
+  }).join('');
+  const mk = (sfx, cls) => `<marker id="${id}${sfx}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="${cls}" d="M0,0 L10,5 L0,10 z"/></marker>`;
+  return `<figure class="wide fig">${b.h ? `<figcaption>${esc(b.h)}</figcaption>` : ''}<div class="sema"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(b.alt || b.h || 'Şema')}"><defs>${mk('', 'mk')}${mk('x', 'mk x')}</defs>${edges}${nodes}</svg></div>${b.alt ? `<p class="fig-alt">${esc(b.alt)}</p>` : ''}</figure>`;
+}
+const yoklaView = b => `<details class="yokla"><summary><span class="yk-l">Kendini yokla</span><span class="yk-q">${fmt(b.q)}</span></summary><div class="yk-a">${fmt(b.a)}</div></details>`;
+function cellView(c, i) {
+  const s = String(c), cls = s.startsWith('✓') ? ' class="c-ok"' : s.startsWith('✗') ? ' class="c-no"' : '';
+  return i === 0 ? `<td><strong>${fmt(s)}</strong></td>` : `<td${cls}>${fmt(s)}</td>`;
+}
+function haritaView() {
+  const h = PAKET.harita;
+  if (!h) return '';
+  return `<nav class="harita" aria-label="Konu haritası"><p class="eyebrow">Konu haritası</p><div class="hr-kok">${esc(h.kok)}</div><ol class="hr-dal">${h.dallar.map((d, i) => {
+    const s = PAKET.oku.find(x => x.id === d.ref), r = s && isRead(S.st, s.id);
+    return `<li><button data-act="jump" data-sec="${d.ref}" class="${r ? 'read' : ''}"><span class="hr-no tnum">${s ? esc(s.no) : i + 1}</span><span><b>${esc(d.ad)}</b><small>${esc(d.x || '')}</small></span>${r ? '<span class="hr-ok" aria-label="okundu">✓</span>' : ''}</button></li>`;
+  }).join('')}</ol></nav>`;
+}
+
+/* ---------- Dersler ---------- */
+function dersOzet(d) {
+  const ks = d.konular.filter(k => k.paket);
+  const oz = ks.map(k => GENEL.ozet[d.id + '-' + k.id]).filter(Boolean);
+  const now = Date.now();
+  return {
+    hazir: ks.length, toplam: d.konular.length,
+    m: ks.length ? avg(ks.map(k => { const o = GENEL.ozet[d.id + '-' + k.id]; return o ? o.m : 0; })) : 0,
+    due: oz.reduce((s, o) => s + arr(o.dues).filter(t => t <= now).length, 0),
+    gecen: oz.filter(o => o.gate).length
+  };
+}
+function sinavChip(dId) {
+  const t = examTimeOf(dId);
+  if (!t) return '';
+  const left = Math.ceil((t - Date.now()) / DAY);
+  return `<span class="pill ${left <= 7 && left >= 0 ? 'warn' : ''} tnum">${left > 0 ? 'Sınava ' + left + ' gün' : left === 0 ? 'Sınav bugün' : 'Sınav tarihi geçti'}</span>`;
+}
+function vDersler() {
+  if (!KATALOG) return vYukleniyor();
+  const kart = d => {
+    const o = dersOzet(d);
+    return `<li><a class="ders-k" href="#ders-${d.id}">
+      <span class="dk-ad">${esc(d.ad)}</span>
+      <span class="dk-src">${esc(d.kaynak)}</span>
+      <span class="dk-m">${o.toplam ? `<span class="tnum">${o.toplam} konu</span>` : '<span>Konu listesi bekleniyor</span>'}<span class="tnum">${o.hazir ? o.hazir + ' paket hazır' : 'Paket hazırlanıyor'}</span>${o.due ? `<span class="pill accent tnum">${o.due} kart tekrar</span>` : ''}${sinavChip(d.id)}</span>
+      ${o.hazir ? `<span class="pbar" aria-label="Ustalık yüzde ${pct(o.m)}"><i style="width:${pct(o.m)}%"></i></span>` : ''}
+    </a></li>`;
+  };
+  const grup = n => `<section class="ders-g"><h2 class="ders-gh">${n}. sınıf</h2><ul class="ders-list">${KATALOG.dersler.filter(d => d.sinif === n).map(kart).join('')}</ul></section>`;
+  return `<section class="col wide-col">
+    <p class="eyebrow">${KATALOG.dersler.length} ders</p>
+    <h1 class="title">Dersler</h1>
+    <p class="lead">Her ders, notundaki sırayla konu konu ilerler. Paketi hazır olan konular açık; diğerleri materyallerinden hazırlandıkça eklenecek.</p>
+    ${grup(1)}${grup(2)}
+  </section>`;
+}
+function grupla(ks) { const out = []; ks.forEach(k => { const g = k.grup || ''; if (!out.length || out[out.length - 1].ad !== g) out.push({ ad: g, ks: [] }); out[out.length - 1].ks.push(k); }); return out; }
+function vDers() {
+  if (!KATALOG) return vYukleniyor();
+  const d = dersOf(S.ui.ders);
+  if (!d) return `<section class="col"><p class="lead">Bu ders bulunamadı.</p><p><a href="#dersler">← Dersler</a></p></section>`;
+  const ilk = d.konular.find(k => k.paket && !(GENEL.ozet[d.id + '-' + k.id] || {}).gate);
+  const node = k => {
+    const key = d.id + '-' + k.id, o = GENEL.ozet[key];
+    if (k.paket) {
+      const m = o ? o.m : 0, due = o ? arr(o.dues).filter(t => t <= Date.now()).length : 0;
+      return `<li class="node open${ilk === k ? ' next' : ''}"><span class="node-no">${esc(k.no)}</span><div class="node-card"><a class="node-t" href="#konu-${key}">${esc(k.ad)}</a><div class="node-m"><span>${o && o.gate ? 'Kapı geçildi' : ilk === k ? 'Sıradaki konu' : 'Açık'}</span><span class="tnum">Ustalık %${pct(m)}</span>${due ? `<span class="tnum">${due} kart tekrar</span>` : ''}${k.not ? `<span>${esc(k.not)}</span>` : ''}</div><span class="pbar"><i style="width:${pct(m)}%"></i></span></div></li>`;
+    }
+    return `<li class="node empty"><span class="node-no">${esc(k.no)}</span><div class="node-body"><span class="node-t">${esc(k.ad)}</span><div class="node-m"><span>Paket hazırlanıyor</span>${k.not ? `<span>${esc(k.not)}</span>` : ''}</div></div></li>`;
+  };
+  const ex = examDateOf(d.id) || '';
+  return `<section class="col">
+    <a class="back" href="#dersler">← Dersler</a>
+    <p class="eyebrow">${d.sinif}. sınıf · ${d.konular.length ? d.konular.length + ' konu' : 'konu listesi bekleniyor'}</p>
+    <h1 class="title">${esc(d.ad)}</h1>
+    <p class="lead">${esc(d.kaynak)}</p>
+    ${d.materyal.length ? `<div class="chips">${d.materyal.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>` : ''}
+    <div class="card exam"><label class="eyebrow" for="exam-${d.id}">Sıradaki sınavın tarihi</label>
+      <div class="row"><input type="date" id="exam-${d.id}" data-chg="exam" data-ders="${d.id}" value="${esc(ex)}"><span class="muted small">Kart aralıkları bu tarihe göre ayarlanır; Bugün ekranı yaklaşan sınava öncelik verir.</span></div></div>
+    ${d.bekleyen ? `<div class="box" data-k="not"><div class="bh"><span class="pill">Hazırlanıyor</span><span>Sıradaki adım</span></div><p>${esc(d.bekleyen)}</p></div>` : ''}
+    ${d.konular.length ? grupla(d.konular).map(g => (g.ad ? `<h2 class="path-grup">${esc(g.ad)}</h2>` : '') + `<ol class="path">${g.ks.map(node).join('')}</ol>`).join('') : ''}
+  </section>`;
+}
+const vYukleniyor = () => S.hata ? `<section class="col"><div class="card"><p>${esc(S.hata)}</p><div class="row" style="margin-top:12px"><button class="btn pri" data-act="yenile">Tekrar dene</button></div></div></section>`
+  : `<section class="col"><p class="muted" role="status">Yükleniyor…</p></section>`;
+
+/* ---------- Bugün: bütün derslerden özet ---------- */
+function bugunGenel() {
+  if (!KATALOG) return '';
+  const now = Date.now();
+  const sinavlar = KATALOG.dersler.map(d => ({ d, t: examTimeOf(d.id) })).filter(x => x.t && x.t >= now - DAY).sort((a, b) => a.t - b.t).slice(0, 4);
+  const tekrar = Object.keys(GENEL.ozet).map(key => {
+    const o = GENEL.ozet[key], i = key.indexOf('-'), dId = key.slice(0, key.lastIndexOf('-')), kId = key.slice(key.lastIndexOf('-') + 1);
+    const d = dersOf(dId), k = konuOf(dId, kId);
+    return d && k ? { key, d, k, due: arr(o.dues).filter(t => t <= now).length } : null;
+  }).filter(x => x && x.due > 0).sort((a, b) => b.due - a.due);
+  const son = GENEL.son && GENEL.son.key !== AKTIF ? GENEL.son.key : null;
+  const parts = [];
+  if (sinavlar.length) parts.push(`<div class="card"><p class="eyebrow">Yaklaşan sınavlar</p><ul class="mini-list">${sinavlar.map(x => { const l = Math.ceil((x.t - now) / DAY); return `<li><a href="#ders-${x.d.id}">${esc(x.d.ad)}</a><span class="tnum ${l <= 7 ? 'warn-t' : ''}">${l > 0 ? l + ' gün' : 'bugün'}</span></li>`; }).join('')}</ul></div>`);
+  if (tekrar.length) parts.push(`<div class="card"><p class="eyebrow">Tekrar zamanı gelen kartlar</p><ul class="mini-list">${tekrar.map(x => `<li><a href="#konu-${x.key}">${esc(x.d.ad)} · Konu ${esc(x.k.no)}</a><span class="tnum">${x.due} kart</span></li>`).join('')}</ul></div>`);
+  if (!sinavlar.length) parts.push(`<div class="card"><p class="eyebrow">Sınav tarihleri</p><p class="small">Ders sayfalarından sınav tarihlerini girersen Bugün ekranı yaklaşan sınava göre öncelik verir. <a href="#dersler">Derslere git</a></p></div>`);
+  if (son) { const dId = son.slice(0, son.lastIndexOf('-')), kId = son.slice(son.lastIndexOf('-') + 1), d = dersOf(dId), k = konuOf(dId, kId); if (d && k) parts.push(`<div class="card"><p class="eyebrow">Diğer cihazda en son</p><p><a href="#konu-${son}">${esc(d.ad)} · Konu ${esc(k.no)}: ${esc(k.ad)}</a></p></div>`); }
+  return parts.length ? `<div class="genel-grid">${parts.join('')}</div>` : '';
+}
+
+/* ---------- Gelişim: konu açık değilken ders özeti ---------- */
+function vGelisimBos() {
+  if (!KATALOG) return vYukleniyor();
+  const rows = KATALOG.dersler.map(d => ({ d, o: dersOzet(d) })).filter(x => x.o.hazir);
+  return `<section class="col">
+    <p class="eyebrow">Gelişim</p>
+    <h1 class="title">Derslerde nerdesin?</h1>
+    <p class="lead">Ayrıntılı gelişim (ustalık bileşenleri, hata türleri, kalibrasyon) bir konu açtığında o konu için görünür.</p>
+    ${rows.length ? `<ul class="mini-list card">${rows.map(x => `<li><a href="#ders-${x.d.id}">${esc(x.d.ad)}</a><span class="tnum">${x.o.hazir} paket · ustalık %${pct(x.o.m)}</span></li>`).join('')}</ul>` : '<p class="muted">Henüz çalışılmış konu yok.</p>'}
+    <div class="row"><a class="btn pri" href="#dersler">Derslere git</a></div>
+  </section>`;
+}
+/* ================= 10. EYLEMLER ================= */
+function openStep(id) {
+  S.ui.step = id;
+  if (id === 'kartlar' && S.ui.ses && !S.ui.ses.cur) S.ui.ses = null;
+  commit(st => { st.last = { step: id, t: Date.now() }; }, { quiet: true });
+  if (S.ui.view !== 'konu') { location.hash = '#konu-' + AKTIF; return; }
+  render();
+  const el = document.getElementById('steps');
+  if (el) { const y = el.getBoundingClientRect().top + window.scrollY - 64; if (window.scrollY > y) window.scrollTo({ top: Math.max(0, y) }); }
+}
+function startSession(early) {
+  const ids = sessionIds(S.ui.onlyWeak, early);
+  if (!ids.length) { toast('Çalışılacak kart yok.'); return; }
+  S.ui.ses = { queue: ids.slice(1), cur: ids[0], rev: false, res: {}, done: [], total: ids.length, again: 0 };
+  render();
+}
+function rateCard(g) {
+  const ses = S.ui.ses;
+  if (!ses || !ses.cur || !ses.rev) return;
+  const id = ses.cur;
+  (ses.hist = ses.hist || []).push({ cur: id, queue: ses.queue.slice(), done: ses.done.slice(), again: ses.again, res: JSON.parse(JSON.stringify(ses.res)), rec: S.st.cards[id] ? JSON.parse(JSON.stringify(S.st.cards[id])) : null, err: g === 1 && !ses.res[id] });
+  if (ses.hist.length > 20) ses.hist.shift();
+  if (S.drafts.kart) setDraft('kart', '');
+  const r = ses.res[id] || (ses.res[id] = { seen: 0, streak: 0, first: null, need: 1 });
+  const firstTime = r.first === null;
+  r.seen++;
+  if (firstTime) {
+    r.first = g;
+    commit(st => { st.cards[id] = fsrsNext(st.cards[id], g, Date.now()); if (g === 1) addErr(st, 'Bilgi eksikliği', 'Kart ' + CARD[id].n); }, { quiet: true });
+  }
+  if (g === 1) r.need = 2;
+  r.streak = g >= 3 ? r.streak + 1 : 0;
+  const finished = g >= 3 && r.streak >= r.need;
+  if (finished) ses.done.push(id);
+  else { if (firstTime) ses.again++; ses.queue.splice(Math.min(ses.queue.length, g === 1 ? 2 : 4), 0, id); }
+  ses.cur = ses.queue.shift() || null;
+  ses.rev = false;
+  if (!ses.cur) commit(st => addLog(st, 'Kart oturumu: ' + ses.total + ' kart, ' + ses.again + ' tanesi tekrar istedi'));
+  else render();
+}
+function checkEx(id) {
+  const e = PAKET.ayirt[id];
+  let score = 0, wrong = 0;
+  if (id === 'e1' || id === 'e3') {
+    const map = id === 'e1' ? S.ui.e1 : S.ui.e3;
+    const c = e.items.filter(it => map[it.id] === it.a).length;
+    score = c / e.items.length; wrong = e.items.length - c;
+  } else if (id === 'e2') {
+    const correct = e.items.slice().sort((a, b) => a.y - b.y);
+    const c = S.ui.e2.filter((x, i) => correct[i] && correct[i].id === x).length;
+    score = c / correct.length; wrong = c < correct.length ? 1 : 0;
+  }
+  S.ui.exChecked[id] = true;
+  commit(st => {
+    const p = st.ex[id] || { best: 0, n: 0 };
+    st.ex[id] = { t: Date.now(), best: Math.max(p.best || 0, score), last: score, n: (p.n || 0) + 1 };
+    for (let i = 0; i < Math.min(4, wrong); i++) addErr(st, e.err, 'Ayırt et · ' + e.ad);
+    addLog(st, e.ad + ': %' + pct(score));
+  });
+}
+function answerDY(itId, ri) {
+  const e = PAKET.ayirt.e4, it = e.items.find(x => x.id === itId), s = S.ui.e4[itId];
+  if (!it || !s || s.v == null || !s.c || s.r != null) return;
+  s.r = ri;
+  const vOk = s.v === it.d, rOk = ri === it.w;
+  s.score = vOk ? (rOk ? 1 : 0.5) : 0;
+  const allDone = e.items.every(x => S.ui.e4[x.id] && S.ui.e4[x.id].r != null);
+  commit(st => {
+    addCalib(st, s.c, vOk, it.x, (it.d ? 'Doğru: ' : 'Yanlış: ') + it.why[it.w]);
+    if (!vOk) addErr(st, 'Kavram karışıklığı', 'Gerekçeli doğru/yanlış');
+    else if (!rOk) addErr(st, 'Eksik gerekçe', 'Gerekçeli doğru/yanlış');
+    if (allDone) {
+      const sc = avg(e.items.map(x => S.ui.e4[x.id].score)), p = st.ex.e4 || { best: 0, n: 0 };
+      st.ex.e4 = { t: Date.now(), best: Math.max(p.best || 0, sc), last: sc, n: (p.n || 0) + 1 };
+      addLog(st, 'Gerekçeli doğru/yanlış: %' + pct(sc));
+      S.ui.exChecked.e4 = true;
+    }
+  });
+}
+function checkK2() {
+  const k = PAKET.pratik.k2, blanks = k.parcalar.filter(p => typeof p !== 'string');
+  const c = blanks.filter(b => S.ui.k2[b.b] === b.a).length, score = c / blanks.length;
+  S.ui.k2c = true;
+  commit(st => {
+    addAtt(st, { kind: 'k2', ref: 'k2', score, pts: c, max: blanks.length, mode: 'auto' });
+    if (c < blanks.length) addErr(st, 'Uygulama hatası', 'Pratik · Kademe 2');
+    addLog(st, 'Boşluklu çözüm: ' + c + '/' + blanks.length);
+  });
+}
+function timerOver(key) { const t = S.ui.timer; return !!(t && t.key === key && Date.now() > t.end); }
+async function doBosAI() {
+  const text = (S.drafts.bos || '').trim();
+  if (!text) return;
+  const r = await runAI('bos', promptBos(text));
+  if (!r || typeof r !== 'object') return;
+  const ids = new Set(PAKET.bos.kp.map(k => k.id));
+  const kap = arr(r.kapsanan).map(String).filter(x => ids.has(x));
+  const kis = arr(r.kismi).map(String).filter(x => ids.has(x) && !kap.includes(x));
+  const ipucu = S.ui.bosIpucu || 0, score = (kap.length + 0.5 * kis.length) / PAKET.bos.kp.length * IPUCU_K[ipucu];
+  const y = yanl(r.yanlislar);
+  commit(st => {
+    addAtt(st, { kind: 'bos', ref: 'bos', score, ipucu, mode: 'ai', text: text.slice(0, 4000), detail: { kap, kis, yan: y, gb: str(r.geri_bildirim, 400), sa: str(r.sonraki_adim, 300) } });
+    PAKET.bos.kp.filter(k => !kap.includes(k.id) && !kis.includes(k.id)).slice(0, 5).forEach(() => addErr(st, 'Bilgi eksikliği', 'Boş sayfa'));
+    y.slice(0, 3).forEach(() => addErr(st, 'Kavram karışıklığı', 'Boş sayfa'));
+    addLog(st, 'Boş sayfa: %' + pct(score) + ' kapsandı');
+  });
+}
+function saveBosSelf() {
+  const kap = PAKET.bos.kp.filter(k => S.ui.bosSelf[k.id]).map(k => k.id);
+  const ipucu = S.ui.bosIpucu || 0, score = kap.length / PAKET.bos.kp.length * IPUCU_K[ipucu];
+  S.ui.bosMode = null; S.ui.bosSelf = {};
+  commit(st => {
+    addAtt(st, { kind: 'bos', ref: 'bos', score, ipucu, mode: 'self', text: (S.drafts.bos || '').slice(0, 4000), detail: { kap, kis: [], yan: [], gb: '', sa: '' } });
+    PAKET.bos.kp.filter(k => !kap.includes(k.id)).slice(0, 5).forEach(() => addErr(st, 'Bilgi eksikliği', 'Boş sayfa'));
+    addLog(st, 'Boş sayfa (öz değerlendirme): %' + pct(score));
+  });
+}
+async function doK3AI() {
+  const text = (S.drafts.k3 || '').trim(), photo = S.ui.photo.k3;
+  if (!text && !photo) return;
+  const late = timerOver('k3');
+  const r = await runAI('k3', promptK3(text, !!photo), photo ? [photo] : null);
+  if (!r || typeof r !== 'object') return;
+  const p = r.puanlar || {}, sc = {};
+  PAKET.pratik.k3.rubrik.forEach(x => { sc[x.k] = clampInt(p[x.k], 0, 4); });
+  const total = Object.values(sc).reduce((s, x) => s + x, 0);
+  const hts = arr(r.hata_turleri).filter(h => HATA.includes(h));
+  commit(st => {
+    addAtt(st, { kind: 'k3', ref: 'k3', score: total / 20, pts: total, max: 20, mode: 'ai', text: (text || str(r.okunan_metin, 4000)).slice(0, 4000),
+      detail: { sc, eks: arr(r.eksikler).slice(0, 6).map(x => str(x, 300)), yan: yanl(r.yanlislar), kd: arr(r.kaynak_disi).slice(0, 4).map(x => str(x, 300)), hts, gy: str(r.guclu_yan, 300), sa: str(r.sonraki_adim, 300), okunan: photo ? str(r.okunan_metin, 4000) : '' } });
+    hts.forEach(h => addErr(st, h, 'Pratik · Kademe 3'));
+    if (late) addErr(st, 'Süre yönetimi', 'Pratik · Kademe 3');
+    addLog(st, 'Olay çözümü (kademe 3): ' + total + '/20');
+  });
+}
+function saveK3Self() {
+  const oz = PAKET.pratik.k3.oz, got = oz.filter(r => S.ui.k3Self[r.id]);
+  const pts = got.reduce((s, r) => s + r.p, 0), sc = {};
+  PAKET.pratik.k3.rubrik.forEach(x => { const all = oz.filter(r => r.dim === x.k), g = all.filter(r => S.ui.k3Self[r.id]); sc[x.k] = Math.round(4 * g.reduce((s, r) => s + r.p, 0) / all.reduce((s, r) => s + r.p, 0)); });
+  const late = timerOver('k3');
+  S.ui.k3Mode = null; S.ui.k3Self = {};
+  commit(st => {
+    addAtt(st, { kind: 'k3', ref: 'k3', score: pts / 20, pts, max: 20, mode: 'self', text: (S.drafts.k3 || '').slice(0, 4000), detail: { sc, eks: oz.filter(r => !got.includes(r)).map(r => r.x), yan: [], kd: [], hts: [], gy: '', sa: '' } });
+    if (late) addErr(st, 'Süre yönetimi', 'Pratik · Kademe 3');
+    addLog(st, 'Olay çözümü (öz değerlendirme): ' + pts + '/20');
+  });
+}
+async function doCikAI(qid) {
+  const q = QMAP[qid]; if (!q) return;
+  const key = 'cik-' + qid, text = (S.drafts[key] || '').trim(), photo = S.ui.photo[key];
+  if (!text && !photo) return;
+  const late = timerOver(key);
+  const r = await runAI(key, promptCik(q, text, !!photo), photo ? [photo] : null);
+  if (!r || typeof r !== 'object') return;
+  const pts = clampInt(r.puan, 0, q.max), hts = arr(r.hata_turleri).filter(h => HATA.includes(h));
+  S.ui.cikShow = true;
+  commit(st => {
+    addAtt(st, { kind: 'cik', ref: qid, score: pts / q.max, pts, max: q.max, mode: 'ai', text: (text || str(r.okunan_metin, 4000)).slice(0, 4000),
+      detail: { eks: arr(r.eksik_anahtarlar).slice(0, 8).map(x => str(x, 240)), yan: yanl(r.yanlislar), kd: arr(r.kaynak_disi).slice(0, 4).map(x => str(x, 240)), hts, gb: str(r.geri_bildirim, 400), okunan: photo ? str(r.okunan_metin, 4000) : '' } });
+    hts.forEach(h => addErr(st, h, 'Çıkmış · ' + q.kisa));
+    if (late) addErr(st, 'Süre yönetimi', 'Çıkmış · ' + q.kisa);
+    addLog(st, 'Çıkmış (' + q.kisa + '): ' + pts + '/' + q.max);
+  });
+}
+function saveCikSelf(qid) {
+  const q = QMAP[qid]; if (!q) return;
+  const key = 'cik-' + qid, v = clampInt(S.ui.self[qid] != null ? S.ui.self[qid] : 0, 0, q.max), late = timerOver(key);
+  commit(st => {
+    addAtt(st, { kind: 'cik', ref: qid, score: v / q.max, pts: v, max: q.max, mode: 'self', text: (S.drafts[key] || '').slice(0, 4000) });
+    if (late) addErr(st, 'Süre yönetimi', 'Çıkmış · ' + q.kisa);
+    if (v / q.max < 0.5) addErr(st, 'Bilgi eksikliği', 'Çıkmış · ' + q.kisa);
+    addLog(st, 'Çıkmış (' + q.kisa + ', öz değerlendirme): ' + v + '/' + q.max);
+  });
+  toast('Puanın kaydedildi.');
+}
+function setPhoto(k, f) {
+  if (!f) return;
+  if (IMG && IMG.maxInputBytes && f.size > IMG.maxInputBytes) { toast('Fotoğraf çok büyük; daha küçük bir dosya seç.'); return; }
+  if (IMG && IMG.mediaTypes && IMG.mediaTypes.length && !IMG.mediaTypes.includes(f.type)) { toast('Bu dosya türü desteklenmiyor; JPEG veya PNG seç.'); return; }
+  removePhoto(k);
+  S.ui.photo[k] = f;
+  try { S.ui.photoUrl[k] = URL.createObjectURL(f); } catch (e) { /* önizleme yok */ }
+  render();
+}
+function removePhoto(k) {
+  if (S.ui.photoUrl[k]) { try { URL.revokeObjectURL(S.ui.photoUrl[k]); } catch (e) { /* yok */ } }
+  delete S.ui.photo[k]; delete S.ui.photoUrl[k];
+}
+function resetAll() {
+  const n = (S.st.epoch.n || 0) + 1;
+  S.st = fresh(); S.st.epoch = { n, t: Date.now() };
+  Object.assign(S.ui, { ses: null, e1: {}, e2: [], e3: {}, e4: {}, exChecked: {}, order: {}, k1: 0, k2: {}, k2c: false, preSel: {}, bosSelf: {}, k3Self: {}, self: {}, confirm: null, cik: null, cikShow: false, timer: null });
+  S.drafts = {}; lsSet(LS_DRAFT, {});
+  commit(() => {});
+  toast('İlerleme sıfırlandı.');
+}
+
+const ACT = {
+  'sync-info': () => toast(SYNC_AD[(PAKET ? TS : GS).state] || ''),
+  yenile: () => { S.hata = null; init(); },
+  jump: el => { const t = document.getElementById('sec-' + el.dataset.sec); if (t) t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); },
+  'bos-ipucu': el => { S.ui.bosIpucu = +el.dataset.v; render(); },
+  'kart-sec': el => { S.ui.kartSec = el.dataset.v; S.ui.ses = null; S.ui.kartAcik = null; render(); },
+  'kart-liste': () => { S.ui.kartListe = !S.ui.kartListe; S.ui.ses = null; render(); },
+  'kart-ac': el => { S.ui.kartAcik = S.ui.kartAcik === el.dataset.id ? null : el.dataset.id; render(); },
+  'kart-geri': () => undoRate(),
+  'k4-opt': el => k4Pick(el.dataset.it, +el.dataset.i),
+  'k4-reset': () => { S.ui.k4 = {}; render(); },
+  'k3-iskelet': () => { const k = PAKET.pratik.k3, cur = S.drafts.k3 || ''; setDraft('k3', cur.trim() ? cur + '\n\n' + k.iskelet : k.iskelet); render(); },
+  mins: el => { S.ui.mins = +el.dataset.n; render(); },
+  goto: el => { if (el.dataset.q) { S.ui.cik = el.dataset.q; S.ui.cikShow = false; } if (el.dataset.pr) S.ui.pr = el.dataset.pr; openStep(el.dataset.step); },
+  step: el => { if (el.dataset.step === 'cikmis' && S.ui.step !== 'cikmis') S.ui.cik = null; openStep(el.dataset.step); },
+  'pre-opt': el => { S.ui.preSel[el.dataset.q] = +el.dataset.i; render(); },
+  'pre-conf': el => {
+    const q = PAKET.isinma.find(x => x.id === el.dataset.q), ch = q ? S.ui.preSel[q.id] : null;
+    if (!q || ch == null || S.st.pre[q.id]) return;
+    const conf = +el.dataset.c, ok = ch === q.a;
+    commit(st => {
+      st.pre[q.id] = { t: Date.now(), choice: ch, conf, ok };
+      addCalib(st, conf, ok, q.q, 'Doğrusu: ' + q.o[q.a]);
+      if (PAKET.isinma.every(x => st.pre[x.id])) addLog(st, 'Isınma bitti: ' + PAKET.isinma.filter(x => st.pre[x.id].ok).length + '/' + PAKET.isinma.length);
+    });
+  },
+  read: el => { const id = el.dataset.sec; commit(st => { st.read[id] = { t: Date.now(), on: !isRead(st, id) }; }); },
+  'oku-done': () => commit(st => {
+    PAKET.oku.forEach(s => { if (!isRead(st, s.id)) st.read[s.id] = { t: Date.now(), on: true }; });
+    st.steps.oku = { t: Date.now(), done: true };
+    addLog(st, 'Oku adımı bitti');
+  }),
+  'bos-ai': () => doBosAI(),
+  'bos-self': () => { S.ui.bosMode = S.ui.bosMode === 'self' ? null : 'self'; render(); },
+  'bos-kp': el => { const id = el.dataset.k; S.ui.bosSelf[id] = !S.ui.bosSelf[id]; render(); },
+  'bos-self-save': () => saveBosSelf(),
+  'bos-cards': () => { S.ui.ses = null; S.ui.onlyWeak = false; openStep('kartlar'); },
+  'ses-start': el => startSession(!!el.dataset.early),
+  reveal: () => { if (S.ui.ses && S.ui.ses.cur) { S.ui.ses.rev = true; render(); } },
+  rate: el => rateCard(+el.dataset.g),
+  'ses-end': () => { if (S.ui.ses) { S.ui.ses.cur = null; S.ui.ses.queue = []; } render(); },
+  'ses-close': () => { S.ui.ses = null; render(); },
+  ex: el => { S.ui.ex = el.dataset.e; render(); },
+  'sort-pick': el => { const map = el.dataset.e === 'e1' ? S.ui.e1 : S.ui.e3; map[el.dataset.it] = +el.dataset.j; render(); },
+  'ex-check': el => checkEx(el.dataset.e),
+  'ex-reset': el => {
+    const e = el.dataset.e;
+    S.ui.exChecked[e] = false; delete S.ui.order[e];
+    if (e === 'e1') S.ui.e1 = {}; if (e === 'e3') S.ui.e3 = {}; if (e === 'e2') S.ui.e2 = []; if (e === 'e4') S.ui.e4 = {};
+    render();
+  },
+  'chr-add': el => { if (!S.ui.e2.includes(el.dataset.it)) S.ui.e2.push(el.dataset.it); render(); },
+  'chr-undo': () => { S.ui.e2.pop(); render(); },
+  'dy-v': el => { const s = S.ui.e4[el.dataset.it] || (S.ui.e4[el.dataset.it] = {}); if (s.r != null) return; s.v = el.dataset.v === '1'; render(); },
+  'dy-c': el => { const s = S.ui.e4[el.dataset.it]; if (!s || s.r != null) return; s.c = +el.dataset.c; render(); },
+  'dy-r': el => answerDY(el.dataset.it, +el.dataset.r),
+  pr: el => { S.ui.pr = el.dataset.k; render(); },
+  'k1-next': () => { S.ui.k1++; render(); },
+  'k1-done': () => { S.ui.pr = 'k2'; commit(st => { st.steps.k1 = { t: Date.now(), done: true }; addLog(st, 'Çözümlü örnek tamamlandı'); }); },
+  'k2-check': () => checkK2(),
+  'k2-reset': () => { S.ui.k2 = {}; S.ui.k2c = false; render(); },
+  timer: el => { S.ui.timer = { key: el.dataset.k, end: Date.now() + (+el.dataset.m) * 60000 }; render(); },
+  'timer-stop': () => { S.ui.timer = null; render(); },
+  'k3-ai': () => doK3AI(),
+  'k3-self': () => { S.ui.k3Mode = S.ui.k3Mode === 'self' ? null : 'self'; render(); },
+  'k3-self-save': () => saveK3Self(),
+  'k3-model': () => { S.ui.k3Model = !S.ui.k3Model; render(); },
+  'photo-rm': el => { removePhoto(el.dataset.k); render(); },
+  'cik-open': el => { S.ui.cik = el.dataset.q; S.ui.cikShow = false; render(); window.scrollTo({ top: 0 }); },
+  'cik-close': () => { S.ui.cik = null; render(); },
+  'cik-ai': el => doCikAI(el.dataset.q),
+  'cik-show': () => { S.ui.cikShow = true; render(); },
+  'cik-self-save': el => saveCikSelf(el.dataset.q),
+  'gate-ask': () => { S.ui.confirm = 'gate'; render(); },
+  'gate-yes': () => { S.ui.confirm = null; commit(st => { st.gate = { passed: true, override: true, t: Date.now() }; addLog(st, 'Kapı elle geçildi: sırada ' + sonrakiAd()); }); toast('Kapı açıldı. Sırada ' + sonrakiAd() + ' var.'); },
+  'confirm-no': () => { S.ui.confirm = null; render(); },
+  demo: el => { S.ui.demo = el.dataset.on === '1'; render(); window.scrollTo({ top: 0 }); },
+  'reset-ask': () => { S.ui.confirm = 'reset'; render(); },
+  'reset-yes': () => resetAll(),
+  'ai-stop': el => { const a = S.ui.ai[el.dataset.k]; if (a) a.ctl.abort(); }
+};
+function undoRate() {
+  const ses = S.ui.ses, h = ses && ses.hist && ses.hist.pop();
+  if (!h) return;
+  Object.assign(ses, { cur: h.cur, queue: h.queue, done: h.done, again: h.again, res: h.res, rev: true });
+  commit(st => {
+    if (h.rec) st.cards[h.cur] = Object.assign(h.rec, { t: Date.now() }); else delete st.cards[h.cur];
+    if (h.err) { const last = Object.entries(st.err).filter(([, x]) => x.where === 'Kart ' + CARD[h.cur].n).sort((a, b) => b[1].t - a[1].t)[0]; if (last) delete st.err[last[0]]; }
+  });
+  toast('Son puan geri alındı.');
+}
+function k4Pick(itId, j) {
+  const k = PAKET.pratik.k4;
+  if (S.ui.k4[itId] != null) return;
+  S.ui.k4[itId] = j;
+  if (k.items.every(it => S.ui.k4[it.id] != null)) {
+    const c = k.items.filter(it => S.ui.k4[it.id] === it.a).length;
+    commit(st => {
+      addAtt(st, { kind: 'k4', ref: 'k4', score: c / k.items.length, mode: 'auto' });
+      k.items.filter(it => S.ui.k4[it.id] !== it.a).forEach(it => addErr(st, 'Sorunu görememe', 'Tek değişken ' + it.id));
+      addLog(st, 'Tek değişken: ' + c + '/' + k.items.length + ' doğru');
+    });
+  } else render();
+}
+const CHG = {
+  exam: el => {
+    const d = el.dataset.ders || DERS;
+    if (!d) return;
+    genelCommit(g => { g.sinav[d] = { d: el.value || null, t: Date.now() }; });
+    if (PAKET && d === DERS) commit(st => { st.examDate = el.value || null; st.examT = Date.now(); }); else render();
+  },
+  kartyaz: el => { S.ui.kartYaz = el.checked; render(); },
+  onlyweak: el => { S.ui.onlyWeak = el.checked; S.ui.ses = null; render(); },
+  k2: el => { S.ui.k2[el.dataset.b] = el.value === '' ? undefined : +el.value; render(); },
+  k3oz: el => { S.ui.k3Self[el.dataset.r] = el.checked; render(); },
+  photo: el => setPhoto(el.dataset.k, el.files && el.files[0])
+};
+
+/* ================= 11. OLAY DİNLEYİCİLERİ ================= */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  const f = ACT[el.dataset.act];
+  if (!f) return;
+  e.preventDefault();
+  S.lastKey = keyOf(el);
+  f(el, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.draft) {
+    const k = el.dataset.draft;
+    setDraft(k, el.value);
+    if (k === 'bos') bosCanli(el.value);
+    const has = !!el.value.trim() || !!S.ui.photo[k];
+    document.querySelectorAll('[data-needs="' + k + '"]').forEach(b => { b.disabled = !has; });
+  }
+  if (el.dataset && el.dataset.inp === 'self') {
+    const q = QMAP[el.dataset.q];
+    S.ui.self[el.dataset.q] = +el.value;
+    const o = document.getElementById('o-' + el.dataset.q);
+    if (o && q) o.textContent = el.value + '/' + q.max;
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target, k = el.dataset && el.dataset.chg;
+  if (k && CHG[k]) { S.lastKey = keyOf(el); CHG[k](el); }
+});
+document.addEventListener('focusout', () => { setTimeout(() => { if (S.pendingRender && !isTyping()) render(); }, 0); });
+document.addEventListener('keydown', e => {
+  if (S.ui.view !== 'konu' || S.ui.step !== 'kartlar' || !S.ui.ses || !S.ui.ses.cur || isTyping()) return;
+  if ((e.key === ' ' || e.key === 'Enter') && !S.ui.ses.rev && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); ACT.reveal(); }
+  else if (S.ui.ses.rev && ['1', '2', '3', '4'].includes(e.key)) { e.preventDefault(); rateCard(+e.key); }
+});
+setInterval(() => {
+  const t = S.ui.timer; if (!t) return;
+  document.querySelectorAll('[data-timer]').forEach(el => { const left = t.end - Date.now(); el.textContent = left > 0 ? mmss(left) : 'Süre doldu'; el.classList.toggle('over', left <= 0); });
+}, 1000);
+
+/* ================= 12. YÖNLENDİRME VE BAŞLAT ================= */
+async function route() {
+  const h = (location.hash || '#bugun').slice(1);
+  S.ui.confirm = null;
+  if (h.startsWith('konu-') || h === 'konu12') {
+    const key = h === 'konu12' ? 'anayasa-k12' : h.slice(5);
+    S.ui.view = 'konu';
+    if (!KATALOG) { render(); return; }
+    const dId = key.slice(0, key.lastIndexOf('-')), k = konuOf(dId, key.slice(key.lastIndexOf('-') + 1));
+    if (!k || !k.paket) { S.ui.view = 'ders'; S.ui.ders = dId; render(); return; }
+    const fresh = AKTIF !== key;
+    const ok = await openTopic(key);
+    if (!ok) { render(); return; }
+    if (fresh || !S.ui.step) S.ui.step = (S.st.last && STEP_IDS.includes(S.st.last.step) && hasStep(S.st.last.step)) ? S.st.last.step : nextStep();
+  } else if (h.startsWith('ders-')) { S.ui.view = 'ders'; S.ui.ders = h.slice(5); }
+  else S.ui.view = ['bugun', 'dersler', 'gelisim', 'hesap'].includes(h) ? h : (h === 'yol' ? 'dersler' : 'bugun');
+  if (S.ui.view !== 'gelisim') S.ui.demo = false;
+  render();
+  window.scrollTo({ top: 0 });
+}
+async function init() {
+  render();
+  await loadKatalog();
+  if (!S.hata && !AKTIF) {
+    const son = lsGet(LS_SON) || (GENEL.son && GENEL.son.key) || null;
+    const hh = (location.hash || '').slice(1);
+    if (son && !hh.startsWith('konu-') && hh !== 'konu12') {
+      const dId = son.slice(0, son.lastIndexOf('-')), k = konuOf(dId, son.slice(son.lastIndexOf('-') + 1));
+      if (k && k.paket) await openTopic(son);
+    }
+  }
+  await route();
+}
+window.addEventListener('hashchange', route);
+init().then(() => { initSync(); initAI(); });
+/* ================= 8. HESAP, UYGULAMA (PWA) VE YEDEK =================
+   Claude içinde: senkron Claude'un db'si ile. Uygulama sürümünde (window.RATIO_PWA): Firebase Auth + Firestore,
+   çevrimdışı kalıcılık açık; arayüz aynı syncer'ı kullanır (Firestore uyumlu API). */
+const PWA = { on: !!window.RATIO_PWA, fb: null, auth: null, user: null, hata: null, yeni: null, kurulum: null, durum: 'bekliyor' };
+const FB_KOD = { 'resource-exhausted': 'quota_exceeded', 'unavailable': 'unavailable', 'invalid-argument': 'invalid_argument' };
+function fsSarmal(fs) {
+  return {
+    collection: p => {
+      const c = fs.collection(p);
+      return {
+        doc: id => {
+          const d = c.doc(id);
+          return {
+            set: v => d.set(v).catch(e => { throw { code: FB_KOD[e && e.code] || (e && e.code) || 'error' }; }),
+            onSnapshot: (n, er) => d.onSnapshot({ includeMetadataChanges: true }, n, er)
+          };
+        }
+      };
+    }
+  };
+}
+function pwaInit() {
+  // service worker ve güncelleme
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const bak = w => { if (!w) return; w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) { PWA.yeni = w; toast('Yeni sürüm hazır. Hesap ekranından yenileyebilirsin.'); renderSoon(); } }); };
+      if (reg.waiting && navigator.serviceWorker.controller) { PWA.yeni = reg.waiting; renderSoon(); }
+      bak(reg.installing);
+      reg.addEventListener('updatefound', () => bak(reg.installing));
+      setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+    }).catch(() => {});
+    let yenilendi = false; const vardi = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (yenilendi || !vardi) return; yenilendi = true; location.reload(); });
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.kurulum = e; renderSoon(); });
+  // Firebase
+  const cfg = window.RATIO_FIREBASE;
+  if (!cfg || !cfg.apiKey || !window.firebase) { PWA.durum = 'ayarsiz'; showSync(); return; }
+  try {
+    PWA.fb = firebase.initializeApp(cfg);
+    const fs = firebase.firestore();
+    fs.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    PWA.auth = firebase.auth();
+    PWA.auth.getRedirectResult().catch(e => { PWA.hata = authHata(e); renderSoon(); });
+    PWA.auth.onAuthStateChanged(u => {
+      PWA.user = u || null; PWA.durum = u ? 'girdi' : 'cikti';
+      if (u) { DBX.db = fsSarmal(fs); DBX.uid = u.uid; GS.bind('ratio-genel'); if (DOC_ID) TS.bind(DOC_ID); }
+      else { TS.stop(); GS.stop(); DBX.db = null; DBX.uid = null; TS.set('local'); GS.set('local'); }
+      renderSoon();
+    });
+  } catch (e) { PWA.durum = 'hata'; PWA.hata = 'Firebase başlatılamadı: ' + (e && e.message || e); showSync(); }
+}
+function authHata(e) {
+  const c = e && e.code || '';
+  return ({
+    'auth/invalid-credential': 'E-posta ya da şifre yanlış.', 'auth/wrong-password': 'Şifre yanlış.', 'auth/user-not-found': 'Bu e-postayla hesap yok. “Hesap oluştur”u dene.',
+    'auth/email-already-in-use': 'Bu e-postayla hesap zaten var; giriş yap.', 'auth/weak-password': 'Şifre en az 6 karakter olmalı.', 'auth/invalid-email': 'E-posta adresi geçersiz.',
+    'auth/popup-blocked': 'Açılır pencere engellendi; tekrar dene ya da e-postayla gir.', 'auth/popup-closed-by-user': 'Giriş penceresi kapatıldı.',
+    'auth/network-request-failed': 'İnternet yok. Giriş için bir kez bağlanman gerekir; sonra çevrimdışı çalışır.', 'auth/unauthorized-domain': 'Bu adres Firebase’de yetkili değil (Authentication › Settings › Authorized domains).',
+    'auth/operation-not-allowed': 'Bu giriş yöntemi Firebase’de açılmamış (Authentication › Sign-in method).'
+  })[c] || ('Giriş olmadı: ' + (e && e.message || c));
+}
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+async function googleGiris() {
+  PWA.hata = null;
+  const p = new firebase.auth.GoogleAuthProvider();
+  try { await PWA.auth.signInWithPopup(p); }
+  catch (e) {
+    if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { try { await PWA.auth.signInWithRedirect(p); return; } catch (e2) { e = e2; } }
+    PWA.hata = authHata(e); render();
+  }
+}
+
+/* Yedek: bu cihazdaki bütün Ratio kayıtları tek dosyada */
+function yedekAl() {
+  const data = {};
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('ratio.')) data[k] = JSON.parse(localStorage.getItem(k)); } } catch (e) { /* yok */ }
+  if (AKTIF && LS_STATE) data[LS_STATE] = S.st;
+  data[LS_GENEL] = GENEL;
+  const metin = JSON.stringify({ app: 'ratio', v: 1, t: Date.now(), data }, null, 1);
+  const ad = 'ratio-yedek-' + new Date().toISOString().slice(0, 10) + '.json';
+  if (!PWA.on && window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(d => {
+      if (!d) { toast('Bu görünümde dosya indirilemiyor.'); return; }
+      return d.save({ filename: ad, data: metin }).then(() => toast(Object.keys(data).length + ' kayıt dışa aktarıldı.'), e => { if (e && e.code !== 'declined') toast('Dosya kaydedilemedi.'); });
+    });
+    return;
+  }
+  const blob = new Blob([metin], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = ad;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast(Object.keys(data).length + ' kayıt dışa aktarıldı.');
+}
+async function yedekYukle(file) {
+  let j;
+  try { j = JSON.parse(await file.text()); } catch (e) { toast('Dosya okunamadı.'); return; }
+  if (!j || j.app !== 'ratio' || !j.data) { toast('Bu bir Ratio yedeği değil.'); return; }
+  let n = 0;
+  for (const [k, v] of Object.entries(j.data)) {
+    if (!k.startsWith('ratio.')) continue;
+    if (k === LS_GENEL) { GENEL = mergeGenel(GENEL, v); GENEL.t = Date.now(); lsSet(LS_GENEL, GENEL); GS.schedule(0); n++; continue; }
+    if (/\.v1$/.test(k)) {
+      const cur = k === LS_STATE ? S.st : sane(lsGet(k));
+      const m = mergeState(cur, v);
+      lsSet(k, m); if (k === LS_STATE) { S.st = m; TS.schedule(0); }
+      n++; continue;
+    }
+    if (/\.drafts$/.test(k)) { lsSet(k, Object.assign({}, v, lsGet(k) || {})); n++; continue; }
+    if (k === LS_SON) continue;
+  }
+  toast(n + ' kayıt birleştirildi. Konuları açtıkça hesabına da gönderilir.');
+  render();
+}
+
+function vHesap() {
+  const R = PAKET ? TS : GS;
+  const durum = SYNC_AD[R.state] || '';
+  let giris = '';
+  if (PWA.on) {
+    if (PWA.durum === 'ayarsiz') giris = `<div class="box" data-k="kontrol"><span class="pill">Kurulum</span><p>Eşitleme henüz ayarlanmadı (firebase-config.js boş). İlerleme bu cihazda kayıtlı; uygulama internetsiz çalışır.</p></div>`;
+    else if (PWA.user) giris = `<p class="lead">${esc(PWA.user.email || PWA.user.displayName || 'Hesap')} ile girişli. İlerleme bütün cihazlarında eşitlenir; internet yokken bu cihazda tutulur, bağlanınca gönderilir.</p>
+      <div class="row"><button class="btn" data-act="hesap-cikis" type="button">Çıkış yap</button></div>`;
+    else giris = `<p class="lead">Telefon, iPad ve bilgisayarda aynı ilerleme için aynı hesapla gir. Girmeden de kullanabilirsin; o zaman ilerleme yalnız bu cihazda kalır.</p>
+      <div class="row"><button class="btn pri" data-act="hesap-google" type="button">Google ile giriş</button></div>
+      <form class="card hesap-form" data-form="eposta">
+        <p class="small muted">Ana ekrandaki uygulamada Google penceresi açılmazsa e-posta ve şifreyle gir (her cihazda aynı e-posta).</p>
+        <label class="fld"><span>E-posta</span><input type="email" name="e" autocomplete="username" required></label>
+        <label class="fld"><span>Şifre</span><input type="password" name="p" autocomplete="current-password" minlength="6" required></label>
+        <div class="row"><button class="btn" data-act="hesap-eposta" data-v="giris" type="button">Giriş yap</button><button class="btn quiet" data-act="hesap-eposta" data-v="kayit" type="button">Hesap oluştur</button><button class="btn quiet" data-act="hesap-sifre" type="button">Şifremi unuttum</button></div>
+      </form>`;
+  } else giris = `<p class="lead">Claude içinde açıksın: ilerleme Claude hesabınla cihazlar arasında eşitlenir. Uygulama sürümünün (internetsiz, ana ekranda) eşitlemesi ayrı bir hesapla çalışır; geçişte aşağıdaki yedeği kullan.</p>`;
+  const kur = PWA.on ? (standalone() ? '<p class="small muted">Ana ekrandan açılmış uygulama olarak çalışıyor.</p>'
+    : `<h2 class="h-ara">Ana ekrana ekle</h2>
+      ${PWA.kurulum ? '<div class="row"><button class="btn pri" data-act="pwa-kur" type="button">Uygulamayı yükle</button></div>' : ''}
+      <ul class="small"><li><b>iPhone / iPad:</b> Safari’de Paylaş › Ana Ekrana Ekle.</li><li><b>Android:</b> Chrome menüsü › Uygulamayı yükle.</li><li><b>Bilgisayar:</b> Chrome/Edge adres çubuğundaki yükle simgesi.</li></ul>
+      <p class="small muted">Ana ekrana eklenen uygulamanın verisini tarayıcı silmez; Safari sekmesinde açık bırakılan site verisi uzun süre açılmazsa silinebilir.</p>`) : '';
+  return `<section class="col">
+    <p class="eyebrow">Hesap ve kayıt</p>
+    <h1 class="title">Kayıt durumu</h1>
+    <p><span class="sync" data-s="${esc(R.state)}" style="pointer-events:none"><span class="dot"></span><span class="sync-t">${esc(durum)}</span></span></p>
+    ${PWA.hata ? `<div class="box" data-k="hata"><span class="pill">Giriş</span><p>${esc(PWA.hata)}</p></div>` : ''}
+    ${giris}
+    ${PWA.yeni ? '<div class="box" data-k="ipucu"><span class="pill">Güncelleme</span><p>Yeni sürüm indirildi.</p><div class="row"><button class="btn pri" data-act="pwa-yenile" type="button">Şimdi yenile</button></div></div>' : ''}
+    ${kur}
+    <h2 class="h-ara">Yedek</h2>
+    <p class="small">Bu cihazdaki bütün ilerlemeyi tek dosyaya al ya da bir yedeği birleştir (hiçbir şey silinmez; aynı kartta yeni olan kalır).</p>
+    <div class="row"><button class="btn" data-act="yedek-al" type="button">Dışa aktar</button><label class="btn quiet">İçe aktar<input type="file" accept="application/json,.json" data-chg="yedek-yukle" hidden></label></div>
+    ${PWA.on ? `<p class="small muted">Sürüm ${esc(window.RATIO_SURUM || '')}${navigator.onLine ? '' : ' · çevrimdışı'}</p>` : ''}
+  </section>`;
+}
+Object.assign(ACT, {
+  'sync-info': () => { location.hash = '#hesap'; },
+  'hesap-google': () => googleGiris(),
+  'hesap-cikis': async () => { try { [TS, GS].forEach(R => { if (R.ref && R.timer) R.flush(); }); await PWA.auth.signOut(); } catch (e) { /* yok */ } },
+  'hesap-eposta': async el => {
+    const f = el.closest('form'), e = f.elements.e.value.trim(), p = f.elements.p.value;
+    if (!e || p.length < 6) { PWA.hata = 'E-posta ve en az 6 karakterlik şifre gir.'; render(); return; }
+    PWA.hata = null;
+    try { if (el.dataset.v === 'kayit') await PWA.auth.createUserWithEmailAndPassword(e, p); else await PWA.auth.signInWithEmailAndPassword(e, p); }
+    catch (er) { PWA.hata = authHata(er); render(); }
+  },
+  'hesap-sifre': async el => {
+    const e = el.closest('form').elements.e.value.trim();
+    if (!e) { PWA.hata = 'Önce e-posta adresini yaz.'; render(); return; }
+    try { await PWA.auth.sendPasswordResetEmail(e); toast('Şifre sıfırlama e-postası gönderildi.'); } catch (er) { PWA.hata = authHata(er); render(); }
+  },
+  'pwa-kur': async () => { if (!PWA.kurulum) return; PWA.kurulum.prompt(); try { await PWA.kurulum.userChoice; } catch (e) { /* yok */ } PWA.kurulum = null; render(); },
+  'pwa-yenile': () => { if (PWA.yeni) PWA.yeni.postMessage('atla'); else location.reload(); },
+  'yedek-al': () => yedekAl()
+});
+Object.assign(CHG, { 'yedek-yukle': el => { const f = el.files && el.files[0]; if (f) yedekYukle(f); el.value = ''; } });
+window.addEventListener('online', () => { [TS, GS].forEach(R => R.schedule(0)); renderSoon(); });
+window.addEventListener('offline', () => renderSoon());
+})();
+</script>
+
+</html>
